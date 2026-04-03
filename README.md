@@ -133,6 +133,7 @@ Greenlight requests the minimum permissions required to function:
 | **Pull Requests** | Read | Read PR metadata (branch, SHA, repository) to associate checks with the correct commit |
 
 The app subscribes to two webhook events:
+
 - **Deployment protection rule** (`requested`) — to create the check run with a "Run CI" button when a workflow pauses at the `greenlight` environment gate
 - **Check run** (`requested_action`) — to respond when a developer clicks the "Run CI" button
 

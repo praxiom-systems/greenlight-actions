@@ -6,7 +6,7 @@ If you discover a security vulnerability in Greenlight Actions, please report it
 
 **Preferred:** Use [GitHub's private vulnerability reporting](https://github.com/rrlamichhane/greenlight-actions/security/advisories/new) to submit a report directly on this repository.
 
-**Email:** If you prefer email, contact us at greenlight@praxiomsystems.com.
+**Email:** If you prefer email, contact us at <greenlight@praxiomsystems.com>.
 
 ### What to Expect
 
