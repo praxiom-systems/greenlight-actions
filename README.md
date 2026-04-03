@@ -4,7 +4,9 @@ Gate CI behind manual approval. Zero wasted minutes.
 
 [![Install](https://img.shields.io/badge/Install-GitHub_Marketplace-blue)](https://github.com/apps/greenlight-actions)
 
-Greenlight adds a gate to your existing CI pipeline. Workflows still trigger on every push, but the actual work pauses until a developer clicks "Run CI" on the pull request. No more burned minutes on WIP commits, typo fixes, or mid-rebase pushes.
+Every push triggers your CI. Greenlight pauses the expensive part until you click "Run CI" — so WIP commits, typo fixes, and mid-rebase pushes cost you nothing.
+
+**Free.** One-click install, one line of YAML, setup in under two minutes.
 
 <p align="center">
   <img src="assets/screenshots/02-run-ci-button.png" alt="Greenlight Actions check with Run CI button" width="700">
@@ -62,7 +64,7 @@ jobs:
 
 Push a branch and open a PR. Your workflow will start, pause at the `greenlight` environment gate, and you will see a "Greenlight Actions: CI" check with a "Run CI" button. Click it when your code is ready.
 
-That is it. No config files, no dashboard, no CLI.
+That is it. No config files, no dashboard, no CLI. Setup takes under two minutes.
 
 ### Workflows That Also Run on Push
 
@@ -94,13 +96,12 @@ On a pull request, the job uses the `greenlight` environment and pauses at the g
 
 ## Why Greenlight
 
-| Problem | How Greenlight Helps |
-|---------|---------------------|
-| CI runs on every push, burning minutes on WIP code | Workflows trigger normally but pause until you click "Run CI" — no compute burned on WIP |
-| Red checks on incomplete work train people to ignore failures | Checks stay neutral ("waiting for you to greenlight") until explicitly triggered |
-| Stale green checks on outdated commits give false confidence | Every new push re-triggers the workflow and pauses at the gate again |
-| Gating CI requires custom scripts or branch rules | One-click install, one-line workflow change |
-| Third-party CI tools require credentials and config | Stateless, serverless — add one line to your workflow and you are done |
+| What Changes | Before Greenlight | After Greenlight |
+|---|---|---|
+| CI minutes on WIP pushes | Every push burns compute | Workflows pause until you click "Run CI" — zero minutes burned |
+| Red checks on incomplete code | Failures train your team to ignore CI | Checks stay neutral until you explicitly trigger |
+| Stale green checks | Outdated commits show false confidence | Every push resets the gate automatically |
+| Setup complexity | Custom scripts, branch rules, or Enterprise plans | One line of YAML, free on all GitHub plans |
 
 ### Alternatives Compared
 
@@ -110,6 +111,12 @@ On a pull request, the job uses the `greenlight` environment and pauses at the g
 | Polling-based approval Actions | Burns Actions minutes while waiting for approval |
 | Removing `pull_request` trigger entirely | Terrible DX — requires navigating to Actions tab, entering branch name |
 | `concurrency` + `cancel-in-progress` | Doesn't prevent the initial trigger, just cancels overlapping runs |
+
+### Who This Is NOT For
+
+- **Teams that want every push tested automatically.** Greenlight adds a manual step — if your workflow is "push and forget," this adds friction you don't want.
+- **Workflows outside GitHub Actions.** Greenlight is GitHub-native and only works with GitHub Actions.
+- **Fork-based contribution workflows.** Deployment protection rules don't apply to workflows triggered from forks.
 
 ---
 
@@ -158,11 +165,23 @@ Yes. Add `environment: greenlight` to each job you want to gate. Each job gets i
 **Does Greenlight work with private repositories?**
 Yes. Deployment protection rules work on both public and private repositories on all GitHub plans.
 
+**What happens if nobody clicks "Run CI"?**
+The workflow run stays in a "waiting" state. GitHub's deployment protection rules have a 30-day timeout, but in practice the workflow run will be cancelled by GitHub's own run timeout first (default: 6 hours, configurable via `timeout-minutes`). No Actions minutes are consumed while waiting.
+
+**How do I remove Greenlight?**
+Remove `environment: greenlight` from your workflow files, then uninstall the app from Settings > Integrations > GitHub Apps. No data cleanup is needed — Greenlight stores nothing.
+
 ---
 
 ## Support
 
 See [SUPPORT.md](SUPPORT.md) for how to get help, report bugs, or request features.
+
+---
+
+## Built by Praxiom Systems
+
+Greenlight is built and maintained by [Praxiom Systems LLC](https://praxiomsystems.com/). It is open-source ([MIT](LICENSE)), stateless, and never touches your code or secrets. Read our [privacy policy](PRIVACY.md) and [security policy](SECURITY.md).
 
 ---
 
