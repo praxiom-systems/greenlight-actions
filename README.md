@@ -34,7 +34,9 @@ Your workflow file stays the same. Greenlight only controls _when_ the work runs
 
 ### 1. Install Greenlight
 
-[Install Greenlight](https://github.com/apps/greenlight-actions) on your GitHub organization or repositories. Setup takes under a minute.
+[Install Greenlight](https://github.com/apps/greenlight-actions) on your GitHub organization or repositories. Setup takes under a minute. The `greenlight` environment is created automatically — here's what it looks like:
+
+<img src="assets/screenshots/06-environment-setup.png" alt="Greenlight environment configuration" width="700">
 
 ### 2. Add the Greenlight Environment to Your Job
 
