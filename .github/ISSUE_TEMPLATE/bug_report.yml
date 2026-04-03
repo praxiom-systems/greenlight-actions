@@ -30,7 +30,7 @@ body:
     id: workflow
     attributes:
       label: Workflow File
-      description: Paste the relevant portion of your workflow YAML (especially the job with `environment: greenlight`)
+      description: "Paste the relevant portion of your workflow YAML (especially the job with `environment: greenlight`)"
       render: yaml
 
   - type: textarea
