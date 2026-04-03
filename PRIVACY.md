@@ -43,4 +43,4 @@ If this policy changes, the updated version will be published in this repository
 
 ## Contact
 
-For privacy questions, contact us at privacy@praxiomsystems.com.
+For privacy questions, contact us at greenlight@praxiomsystems.com.
