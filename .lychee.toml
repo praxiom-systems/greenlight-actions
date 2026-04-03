@@ -1,0 +1,5 @@
+exclude_path = ["docs/superpowers"]
+exclude = [
+    "https://github\\.com/praxiom-systems/greenlight-actions-internal",
+    "https://github\\.com/praxiom-systems/greenlight-actions",
+]

@@ -23,6 +23,7 @@ Greenlight Actions is a GitHub App that gates CI workflows behind manual approva
 ### What GitHub Sends Us
 
 GitHub sends webhook payloads containing:
+
 - Repository name and owner
 - Pull request branch and commit SHA
 - Workflow run ID and environment name
@@ -43,4 +44,4 @@ If this policy changes, the updated version will be published in this repository
 
 ## Contact
 
-For privacy questions, contact us at greenlight@praxiomsystems.com.
+For privacy questions, contact us at <greenlight@praxiomsystems.com>.

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'pull_request' && 'greenlight' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Markdown
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: "**/*.md #docs/superpowers/**"
+
+      - name: Validate YAML
+        run: |
+          pip install --quiet pyyaml
+          python3 -c "
+          import yaml, sys, glob
+          errors = []
+          for f in glob.glob('.github/ISSUE_TEMPLATE/*.yml'):
+              try:
+                  yaml.safe_load(open(f))
+                  print(f'{f}: valid')
+              except yaml.YAMLError as e:
+                  errors.append(f'{f}: {e}')
+                  print(f'{f}: INVALID')
+          if errors:
+              for e in errors:
+                  print(e, file=sys.stderr)
+              sys.exit(1)
+          "
+
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: "--no-progress --config .lychee.toml **/*.md"
+          fail: true

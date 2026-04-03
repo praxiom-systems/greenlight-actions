@@ -4,9 +4,9 @@
 
 If you discover a security vulnerability in Greenlight Actions, please report it responsibly.
 
-**Preferred:** Use [GitHub's private vulnerability reporting](https://github.com/rrlamichhane/greenlight-actions/security/advisories/new) to submit a report directly on this repository.
+**Preferred:** Use [GitHub's private vulnerability reporting](https://github.com/praxiom-systems/greenlight-actions/security/advisories/new) to submit a report directly on this repository.
 
-**Email:** If you prefer email, contact us at greenlight@praxiomsystems.com.
+**Email:** If you prefer email, contact us at <greenlight@praxiomsystems.com>.
 
 ### What to Expect
 
@@ -24,7 +24,7 @@ If you discover a security vulnerability in Greenlight Actions, please report it
 ### What Is NOT a Security Issue
 
 - Bugs in CI workflow configuration (these are GitHub Actions issues)
-- Feature requests or usability issues — please use [GitHub Issues](https://github.com/rrlamichhane/greenlight-actions/issues)
+- Feature requests or usability issues — please use [GitHub Issues](https://github.com/praxiom-systems/greenlight-actions/issues)
 
 ## Architecture
 
