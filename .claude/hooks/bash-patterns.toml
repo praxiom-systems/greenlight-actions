@@ -1,0 +1,1585 @@
+# Bash command validation patterns for Claude Code PreToolUse hook
+# Patterns are regular expressions matched against commands
+#
+# Source: https://github.com/amulya-labs/ai-dev-foundry
+# License: MIT (https://opensource.org/licenses/MIT)
+#
+# Categories:
+#   [deny.*]  - Always block, no user override (catastrophic/irreversible)
+#   [ask.*]   - Prompt user for confirmation (risky but sometimes needed)
+#   [allow.*] - Auto-approve (safe operations)
+#
+# Evaluation order: deny -> ask -> allow -> ask (if no match)
+
+# =============================================================================
+# DENY PATTERNS - Truly catastrophic, never allow
+# =============================================================================
+
+[deny.privilege_escalation]
+description = "Commands that escalate privileges"
+patterns = [
+    "^sudo ",
+    "^su ",
+    "^doas ",
+    # Absolute path bypass: blocks '/usr/bin/sudo bash' which starts with '/' not 'sudo'
+    "/usr/bin/sudo ",
+    "/bin/su ",
+]
+
+[deny.catastrophic_deletion]
+description = "File deletion that could destroy system or all user data"
+patterns = [
+    "^rm -rf /$",
+    "^rm -rf /\\*",
+    "^rm -rf ~",
+    "^rm -rf \\.$",
+    "^rm -rf \\*$",
+    " rm -rf /$",
+    " rm -rf /\\*",
+]
+
+[deny.disk_destruction]
+description = "Direct disk/partition manipulation"
+patterns = [
+    "^dd if=.*/dev/",
+    "^dd of=/dev/",
+    "^mkfs\\.",
+    "^fdisk ",
+    "^parted ",
+]
+
+[deny.system_shutdown]
+description = "System shutdown/reboot commands"
+patterns = [
+    "^reboot",
+    "^shutdown",
+    "^poweroff",
+    "^halt$",
+    "^init 0",
+    "^init 6",
+]
+
+[deny.malicious_patterns]
+description = "Known malicious patterns"
+patterns = [
+    ":.*\\(\\).*\\{.*:\\|",    # Fork bombs
+    "^history -c",              # History destruction
+    "^history -w /dev/null",
+]
+
+[deny.dangerous_chaining]
+description = "Dangerous command combinations via chaining operators"
+# NOTE: These patterns are checked against the FULL command before splitting.
+# The validator first checks deny patterns on raw input, then splits on ;/&&/||.
+# Some rm patterns overlap with catastrophic_deletion for defense-in-depth.
+patterns = [
+    # Chained catastrophic rm -rf (root, home, all)
+    ";\\s*rm -rf /$",
+    "&&\\s*rm -rf /$",
+    "\\|\\|\\s*rm -rf /$",
+    ";\\s*rm -rf ~",
+    "&&\\s*rm -rf ~",
+    "\\|\\|\\s*rm -rf ~",
+    ";\\s*rm -rf /\\*",
+    "&&\\s*rm -rf /\\*",
+    "\\|\\|\\s*rm -rf /\\*",
+    # Chained privilege escalation - catches "safe_cmd && sudo dangerous"
+    ";\\s*sudo ",
+    "&&\\s*sudo ",
+    "\\|\\|\\s*sudo ",
+]
+
+# =============================================================================
+# ASK PATTERNS - Risky but useful, prompt for confirmation
+# =============================================================================
+
+[ask.git_destructive]
+description = "Git operations that rewrite history or are hard to undo"
+patterns = [
+    "^git push --force",
+    "^git push -f",
+    "^git reset --hard",
+    "^git clean -fd",
+    # Simple 'git rebase <branch>' is standard workflow and locally reversible;
+    # only prompt for interactive rebase (rewrites history in complex ways) and
+    # --exec (runs arbitrary shell commands per-commit during rebase)
+    "^git rebase .*(-i |--interactive |--exec\\b|-i$|--interactive$)",
+    # Use negative lookahead to avoid matching 'git merge-base' (read-only)
+    # and any merge that includes 'origin/' anywhere in its arguments
+    # (covers 'git merge origin/main', 'git merge --no-edit origin/main', etc.).
+    # Destructive merge strategies (-X theirs/ours) always prompt even with origin/:
+    # they silently discard local conflict resolutions, which is hard to undo.
+    "^git merge(?!-base\\b)(?!.* origin/)",
+    "^git merge.* -X (theirs|ours)",
+    "^git merge.* --strategy-option[= ](theirs|ours)",
+    "^git merge.* --squash",
+    "^git cherry-pick",
+    "^git revert",
+    "^git stash drop",
+    "^git stash clear",
+    "^git branch -[dD]",
+]
+
+[ask.git_main_branch]
+description = "Pushing directly to main/master branches"
+patterns = [
+    "^git push .* main$",
+    "^git push .* master$",
+    "^git push origin main",
+    "^git push origin master",
+]
+
+[ask.package_publishing]
+description = "Publishing packages to registries"
+patterns = [
+    "^npm publish",
+    "^yarn publish",
+    "^pnpm publish",
+    "^cargo publish",
+    "^poetry publish",
+    "^twine upload",
+    "^gh release create",
+]
+
+[ask.database_destructive]
+description = "Database operations that destroy data"
+patterns = [
+    "^psql .*DROP",
+    "^psql .*TRUNCATE",
+    "^mysql .*DROP",
+]
+
+[ask.kubectl_exec_db_mutations]
+description = "kubectl exec database commands with destructive SQL"
+# NOTE: These are checked BEFORE the allow.kubernetes_exec_database patterns.
+# Evaluation order (deny -> ask -> allow) provides defense-in-depth:
+# destructive SQL is caught here, read-only queries fall through to allow.
+patterns = [
+    # SQL DDL/DML mutation keywords (case-insensitive via scoped (?i:...))
+    # Note: (?i) as global flag mid-pattern is illegal in Python 3.12+
+    "kubectl exec .* -- .*psql.*(?i:DROP|TRUNCATE|DELETE|INSERT|UPDATE|ALTER|CREATE|GRANT|REVOKE)",
+    "kubectl exec .* -- .*mysql.*(?i:DROP|TRUNCATE|DELETE|INSERT|UPDATE|ALTER|CREATE|GRANT|REVOKE)",
+    # psql running a script file (can't inspect contents)
+    "kubectl exec .* -- .*psql.* -f ",
+    "kubectl exec .* -- .*mysql.* < ",
+]
+
+[ask.github_mutations]
+description = "GitHub CLI operations that modify state (irreversible or high-impact)"
+patterns = [
+    "^gh pr merge",
+    "^gh pr close",
+    "^gh pr ready",
+    "^gh repo delete",
+    "^gh repo archive",
+    "^gh release delete",
+    "^gh run cancel",
+]
+
+[ask.github_api_mutations]
+description = "GitHub API calls that mutate state (POST, PUT, PATCH, DELETE)"
+# Two variants per flag: flag-after-path ("gh api /path -X POST")
+# and flag-before-path ("gh api -X POST /path"). The .* in the after-path
+# variants requires at least one character between "api " and the flag,
+# so the before-path forms genuinely need their own patterns.
+# --method[= ] matches both "--method POST" and "--method=POST" (cobra CLI).
+# -X(METHOD) matches curl-style combined form "-XPOST" (no space).
+# Negative lookahead on POST-only variants excludes safe POST-only endpoints:
+#   /replies  — posting a reply comment (safe; DELETE would prompt)
+#   /reactions — adding a reaction (safe; DELETE would prompt)
+#   issues/<N>/comments — posting a comment on an issue/PR (additive)
+#   pulls/<N>/comments — posting an inline PR review comment (additive)
+# pulls/<N>/reviews is intentionally NOT exempted: APPROVE and REQUEST_CHANGES
+# submissions are high-impact workflow actions affecting merge eligibility.
+# Use 'gh pr review --comment' (covered by the existing ^gh allow rule) for
+# posting review-level comments without an approval decision.
+# DELETE, PUT, PATCH always ask even for these endpoints,
+# since deleting or modifying existing content is non-trivially destructive.
+# Flag-after-path: lookahead at start excludes safe paths in the URL.
+# Flag-before-path: lookahead after method excludes safe paths in trailing args.
+patterns = [
+    # POST with exemption for safe endpoints
+    "^gh api (?!.*/(?:replies|reactions|issues/[^/]+/comments|pulls/[^/]+/comments)\\b).* -X POST",
+    "^gh api (?!.*/(?:replies|reactions|issues/[^/]+/comments|pulls/[^/]+/comments)\\b).* -XPOST",
+    "^gh api (?!.*/(?:replies|reactions|issues/[^/]+/comments|pulls/[^/]+/comments)\\b).* --method[= ]POST",
+    "^gh api -X POST(?!.*/(?:replies|reactions|issues/[^/]+/comments|pulls/[^/]+/comments)\\b)",
+    "^gh api -XPOST(?!.*/(?:replies|reactions|issues/[^/]+/comments|pulls/[^/]+/comments)\\b)",
+    "^gh api --method[= ]POST(?!.*/(?:replies|reactions|issues/[^/]+/comments|pulls/[^/]+/comments)\\b)",
+    # PUT, PATCH, DELETE always ask (no safe-endpoint exemption)
+    "^gh api .* -X (PUT|PATCH|DELETE)",
+    "^gh api .* -X(PUT|PATCH|DELETE)",
+    "^gh api .* --method[= ](PUT|PATCH|DELETE)",
+    "^gh api -X (PUT|PATCH|DELETE)",
+    "^gh api -X(PUT|PATCH|DELETE)",
+    "^gh api --method[= ](PUT|PATCH|DELETE)",
+]
+
+[ask.file_permissions]
+description = "Broad file permission changes"
+patterns = [
+    "^chmod 777",
+    "^chmod -R 777",
+    "^chown ",
+    "^chgrp ",
+]
+
+[ask.docker_control]
+description = "Docker operations that stop/remove containers or clean up"
+patterns = [
+    "^docker system prune",
+    "^docker volume prune",
+    "^docker network prune",
+    "^docker image prune",
+    "^docker rmi",
+    "^docker rm ",
+    "^docker stop",
+    "^docker kill",
+    "^docker container rm",
+    "^docker container stop",
+]
+
+[ask.kubernetes_mutations]
+description = "Kubernetes operations that modify cluster state"
+# NOTE: kubectl exec is NOT here - read-only exec commands are allowed,
+# and other exec commands fall through to ask-by-default
+patterns = [
+    "^kubectl apply",
+    "^kubectl create",
+    "^kubectl delete",
+    "^kubectl edit",
+    "^kubectl patch",
+    "^kubectl replace",
+    "^kubectl scale",
+    "^kubectl rollout restart",
+    "^kubectl rollout undo",
+    "^kubectl set ",
+    "^kubectl label",
+    "^kubectl annotate",
+    "^kubectl taint",
+    "^kubectl cordon",
+    "^kubectl uncordon",
+    "^kubectl drain",
+    "^kubectl run ",
+    "^kubectl cp ",
+    "^k3s kubectl apply",
+    "^k3s kubectl create",
+    "^k3s kubectl delete",
+    "^k3s kubectl edit",
+    "^k3s kubectl patch",
+    "^k3s kubectl run ",
+    "^k3s kubectl cp ",
+]
+
+[ask.helm_mutations]
+description = "Helm operations that modify releases"
+patterns = [
+    "^helm install",
+    "^helm upgrade",
+    "^helm uninstall",
+    "^helm rollback",
+    "^helm repo add",
+    "^helm repo remove",
+    "^helm repo update",
+    "^helmfile apply",
+    "^helmfile sync",
+    "^helmfile destroy",
+    # k3s-helm (k3s bundled helm wrapper) — all commands prompt
+    "^k3s-helm ",
+    "^poetrun run k3s-helm ",
+]
+
+[ask.infrastructure_as_code]
+description = "IaC tools that modify infrastructure"
+patterns = [
+    "^terraform apply",
+    "^terraform destroy",
+    "^terraform import",
+    "^terraform taint",
+    "^terraform untaint",
+    "^pulumi up",
+    "^pulumi destroy",
+    "^pulumi refresh",
+    "^ansible-playbook",
+]
+
+[ask.cloud_mutations]
+description = "Cloud CLI operations that create/modify/delete resources"
+patterns = [
+    "aws .* delete(\\s|$)",
+    "aws .* remove(\\s|$)",
+    "aws .* terminate(\\s|$)",
+    "aws .* create(\\s|$)",
+    "aws .* put(\\s|$)",
+    "aws .* update(\\s|$)",
+    "gcloud .* delete(\\s|$)",
+    "gcloud .* create(\\s|$)",
+    "az .* delete(\\s|$)",
+    "az .* create(\\s|$)",
+    # Supabase mutations
+    "supabase .* (delete|reset|push|destroy)(\\s|$)",
+    "supabase (db push|db reset|projects delete|functions delete)(\\s|$)",
+]
+
+[ask.process_control]
+description = "Killing or stopping processes"
+patterns = [
+    "^kill ",
+    "^killall",
+    "^pkill",
+]
+
+[ask.service_management]
+description = "Starting/stopping system services"
+patterns = [
+    "^systemctl start",
+    "^systemctl stop",
+    "^systemctl restart",
+    "^systemctl enable",
+    "^systemctl disable",
+    "^systemctl mask",
+    "^service .* start",
+    "^service .* stop",
+    "^service .* restart",
+]
+
+[ask.firewall]
+description = "Firewall configuration"
+patterns = [
+    "^iptables",
+    "^ip6tables",
+    "^ufw ",
+    "^firewall-cmd",
+    "^nft ",
+]
+
+[ask.user_management]
+description = "User, group, and cron management"
+patterns = [
+    "^crontab -e",
+    "^crontab -r",
+    "^crontab [^-]",
+    "^visudo",
+    "^passwd",
+    "^useradd",
+    "^userdel",
+    "^usermod",
+    "^groupadd",
+    "^groupdel",
+]
+
+[ask.secrets_encryption]
+description = "Encrypting secrets (decryption is allowed)"
+patterns = [
+    "^sops -e",
+    "^sops --encrypt",
+]
+
+[ask.remote_access]
+description = "Remote access and file transfer"
+patterns = [
+    "^ssh ",
+    "^scp ",
+    "^sftp ",
+    "^ftp ",
+    "^telnet ",
+    "^nc -l",
+]
+
+[ask.file_deletion]
+description = "File removal targeting absolute system paths (outside /tmp and current git repo)"
+# Ask when rm targets absolute paths that are NOT:
+#   /tmp/ or /var/tmp/  — temp files (covered by allow.temp_cleanup)
+#   current git repo    — injected dynamically at runtime by _inject_git_root_patterns()
+#                         when Claude is opened inside a git project (cwd has .git)
+# Relative-path rm is allowed by allow.file_deletion_relative.
+# Catastrophic rm (/, ~, *, .) is blocked by deny.catastrophic_deletion.
+patterns = [
+    # rm -r/-rf/-ri/-rfi + absolute path (not /tmp/ or /var/tmp/)
+    "^rm\\s+(-[a-zA-Z]*r[a-zA-Z]*\\s+)+/(?!tmp/|var/tmp/)",
+    # rm -f/-fi + absolute path (not /tmp/ or /var/tmp/)
+    "^rm\\s+(-[a-zA-Z]*f[a-zA-Z]*\\s+)+/(?!tmp/|var/tmp/)",
+    # bare rm + absolute path (not /tmp/ or /var/tmp/)
+    "^rm\\s+/(?!tmp/|var/tmp/)",
+]
+
+[ask.dangerous_pipelines]
+description = "Dangerous command combinations"
+patterns = [
+    "xargs.*rm",
+    "xargs.*mv ",
+    "xargs.*chmod",
+    "xargs.*chown",
+    "find.*-exec.*rm",
+    "find.*-exec.*mv",
+    "find.*-exec.*chmod",
+    "find.*-delete",
+]
+
+[ask.code_execution]
+description = "Arbitrary code execution patterns"
+patterns = [
+    # Pipe to shell - always ask regardless of source
+    "\\| *sh( |$)",
+    "\\| *bash( |$)",
+    "\\| *zsh( |$)",
+    # Remote download piped to interpreters (curl/wget + interpreter)
+    "(curl|wget|http|fetch).*\\| *python[0-9.]*( |$)",
+    "(curl|wget|http|fetch).*\\| *perl( |$)",
+    "(curl|wget|http|fetch).*\\| *ruby( |$)",
+    "(curl|wget|http|fetch).*\\| *node( |$)",
+    "^eval ",
+    "source /tmp/",
+    "source /var/tmp/",
+    "\\. /tmp/",
+    "\\. /var/tmp/",
+]
+
+[ask.terminal_multiplexer_mutations]
+description = "Terminal multiplexer operations that affect sessions or execute commands"
+patterns = [
+    # tmux session/window management
+    "^tmux kill",
+    "^tmux send-keys",
+    "^tmux send-prefix",
+    "^tmux respawn",
+    # tmux shell execution - can run arbitrary commands
+    "^tmux run-shell",
+    "^tmux run ",
+    "^tmux if-shell",
+    "^tmux pipe-pane",
+    # tmux new session/window (can specify commands)
+    "^tmux new-session",
+    "^tmux new-window",
+    "^tmux split-window",
+    "^tmux new ",
+    # screen command injection
+    "^screen -X ",
+    "^screen -S .* -X",
+    # screen can execute commands via -c or shell
+    "^screen .*-c ",
+]
+
+[ask.group_switching]
+description = "Commands executed with different group permissions"
+patterns = [
+    "^sg ",
+    "^newgrp ",
+]
+
+[ask.package_manager_install]
+description = "Package installation from remote registries (supply chain risk)"
+# npm install bare (no package name) is intentionally excluded: it installs from
+# local package.json and is a routine dev operation. Only registry installs prompt.
+# Local-path installs (npm install ./pkg) and flag-only forms (npm install --save-dev)
+# are also excluded via negative lookaheads.
+patterns = [
+    "^apt(-get)? install",
+    "^apt(-get)? upgrade",
+    "^pip install",
+    "^npm install (?!\\.)(?!--)(.+)",
+    "^yarn add",
+    "^brew install",
+    "^pacman -S ",
+    "^cargo install ",
+    "^gem install",
+]
+
+[ask.kernel_modules]
+description = "Kernel module load/unload operations"
+patterns = [
+    "^insmod ",
+    "^modprobe ",
+    "^rmmod ",
+]
+
+# =============================================================================
+# ALLOW PATTERNS - Safe operations, auto-approve
+# =============================================================================
+
+[allow.shell_constructs]
+description = "Shell builtins and constructs"
+patterns = [
+    "^\\(",
+    "^\\{",
+    "^:$",
+    "^true$",
+    "^false$",
+    "^sleep ",
+    "^read ",
+    "^wait",
+    "^set ",
+    "^return",
+    "^exit",
+    "^local ",
+    "^bash -n ",
+    "^test$",
+    "^\\[$",
+    # Loop/flow control builtins (bare keywords only)
+    "^continue$",
+    "^continue ",
+    "^break$",
+    "^break ",
+    "^shift$",
+    "^shift ",
+    # Variable/function builtins
+    "^unset ",
+    "^readonly ",
+    "^typeset ",
+    "^let ",
+    "^getopts ",
+    # ^builtin with negative lookahead: block commands that have ask/deny guards.
+    # Without this, 'builtin eval dangerous' would skip ask.code_execution's eval guard
+    # because deny->ask->allow order means allow matches after ask misses (^eval pattern
+    # won't fire on 'builtin eval ...'). The lookahead re-blocks the dangerous forms.
+    "^builtin (?!eval|exec|source|mapfile)\\S",
+    "^hash ",
+    "^hash$",
+    # Control flow keywords - only bare keywords are auto-allowed.
+    # Full constructs (e.g., 'if condition; then cmd; fi') are split by
+    # the validator, and the body commands are validated separately.
+    # NOTE: Patterns with trailing space removed to prevent bypass like
+    # 'then rm -rf /tmp/*' matching '^then '.
+    "^for ",
+    "^while ",
+    "^until ",
+    "^if ",
+    "^elif ",
+    "^else$",
+    "^then$",
+    "^fi$",
+    "^fi;",
+    "^do$",
+    "^done$",
+    "^done;",
+    "^case ",
+    "^esac$",
+    "^esac;",
+]
+
+[allow.path_utilities]
+description = "Path manipulation utilities"
+patterns = [
+    "^basename",
+    "^dirname",
+    "^realpath",
+    "^readlink",
+    "^mktemp",
+    "^seq ",
+    "^rev",
+    "^yes ",
+]
+
+[allow.shell_navigation]
+description = "Shell navigation and history"
+patterns = [
+    "^cd ",
+    "^pushd",
+    "^popd",
+    "^dirs",
+    "^history",
+    "^jobs",
+    "^fg",
+    "^bg",
+    "^source ",
+    "^\\. ",
+    "^export ",
+    "^alias",
+    "^declare",
+]
+
+[allow.help_and_info]
+description = "Help and version information"
+patterns = [
+    "^less",
+    "^bat",
+    "^watch ",
+    "^man ",
+    # Match --version/--help at end of command OR before a space/pipe suffix
+    # (e.g. 'bash --version | head -1' needs \s variant, not just $)
+    "--version(\\s|$)",
+    "--help(\\s|$)",
+]
+
+[allow.c_cpp_toolchain]
+description = "C/C++ compilation and linking"
+patterns = [
+    "^gcc",
+    "^g\\+\\+",
+    "^clang",
+    "^cc ",
+    "^c\\+\\+ ",
+    "^ld ",
+    "^ar ",
+    "^nm ",
+    "^objdump",
+    "^ldd ",
+    "^pkg-config",
+    "^strip",
+]
+
+[allow.haskell]
+description = "Haskell toolchain"
+patterns = [
+    "^ghc",
+    "^ghci",
+    "^stack ",
+    "^cabal ",
+    "^hlint",
+]
+
+[allow.clojure]
+description = "Clojure toolchain"
+patterns = [
+    "^clj ",
+    "^clojure",
+    "^lein",
+]
+
+[allow.dart_flutter]
+description = "Dart and Flutter"
+patterns = [
+    "^dart ",
+    "^flutter",
+    "^pub ",
+]
+
+[allow.r_lang]
+description = "R language"
+patterns = [
+    "^R ",
+    "^Rscript",
+]
+
+[allow.julia]
+description = "Julia language"
+patterns = [
+    "^julia",
+]
+
+[allow.web3]
+description = "Solidity and Web3 tools"
+patterns = [
+    "^solc",
+    "^hardhat",
+    "^forge ",
+    "^cast ",
+    "^anvil",
+]
+
+[allow.protobuf]
+description = "Protocol Buffers and gRPC"
+patterns = [
+    "^protoc",
+    "^grpcurl",
+    "^buf ",
+]
+
+[allow.local_kubernetes]
+description = "Local Kubernetes tools"
+patterns = [
+    "^kind ",
+    "^minikube",
+    "^k3d",
+]
+
+[allow.kubernetes_utilities]
+description = "Kubernetes helper utilities"
+patterns = [
+    "^kubectx",
+    "^kubens",
+    "^stern ",
+    "^krew",
+]
+
+[allow.ci_cd]
+description = "CI/CD local runners"
+patterns = [
+    "^act",
+]
+
+[allow.cloud_platforms]
+description = "Cloud platform CLIs (read operations)"
+patterns = [
+    "^vercel",
+    "^netlify",
+    "^flyctl",
+    "^railway",
+    "^heroku",
+    "^cloudflared",
+    "^ngrok",
+    "^wrangler",
+    "^doctl",
+    "^eksctl",
+    "^sam ",
+]
+
+[allow.database_tools]
+description = "Database CLI tools"
+patterns = [
+    "^pgcli",
+    "^mycli",
+    "^litecli",
+    "^usql",
+    "^pg_dump",
+    "^pg_restore",
+    "^mysqldump",
+    "^mongodump",
+]
+
+[allow.observability]
+description = "Observability tools"
+patterns = [
+    "^promtool",
+    "^logcli",
+]
+
+[allow.text_processing]
+description = "Text processing utilities"
+patterns = [
+    "^column",
+    "^fold",
+    "^nl ",
+    "^paste",
+    "^shuf",
+    "^tac",
+    "^iconv",
+    "^dos2unix",
+    "^unix2dos",
+    "^strings",
+    "^bc ",
+    "^expr",
+]
+
+[allow.compression]
+description = "Compression and archiving"
+patterns = [
+    "^bzip2",
+    "^bunzip2",
+    "^bzcat",
+    "^xz ",
+    "^unxz",
+    "^xzcat",
+    "^zstd",
+    "^unzstd",
+    "^zstdcat",
+    "^lz4",
+    "^7z ",
+    "^rar ",
+    "^unrar",
+]
+
+[allow.system_inspection]
+description = "System information commands"
+patterns = [
+    "^lscpu",
+    "^lsmem",
+    "^lsblk",
+    "^lspci",
+    "^lsusb",
+    "^nproc",
+    "^sensors",
+    "^inxi",
+    "^neofetch",
+    "^strace",
+    "^ltrace",
+    "^perf ",
+    "^valgrind",
+    # Desktop/display environment info
+    "^gnome-extensions ",
+    "^glxinfo",
+    "^gsettings (get|list|describe|range|monitor|help)",
+    "^dconf (dump|read|list|watch|help)",
+    "^update-desktop-database",
+    "^prime-select query",
+    "^findmnt",
+    "^pstree",
+    "^numfmt",
+]
+
+[allow.system_user_info]
+description = "User session and power profile queries (read-only)"
+# Common informational commands that appear in diagnostic sessions
+# but have no side effects and are not covered by existing allow lists.
+patterns = [
+    "^who\\b",
+    "^last\\b",
+    "^powerprofilesctl",
+]
+
+[allow.generic_read_subcommands]
+description = "Any tool using universally read-only subcommand verbs"
+# Covers unknown/new CLI tools that follow '<tool> <verb>' conventions.
+# 'show', 'get', 'inspect', 'export', 'dump' are intentionally excluded:
+# they expose secrets in specific tools (e.g. git show, kubectl get secret -o yaml).
+# These are legitimate dev operations but feel wrong to auto-approve silently.
+patterns = [
+    "^[a-z][a-z0-9_-]+ (list|ls)( |$)",
+    "^[a-z][a-z0-9_-]+ status( |$)",
+    "^[a-z][a-z0-9_-]+ describe( |$)",
+    "^[a-z][a-z0-9_-]+ query( |$)",
+    "^[a-z][a-z0-9_-]+ version( |$)",
+]
+
+[allow.gsd_framework]
+description = "Get-Shit-Done (GSD) framework commands"
+# GSD runs node commands via gsd-tools.cjs for workstream management,
+# planning, and git operations on .planning/ directories.
+patterns = [
+    # GSD tools CLI (matched anywhere in segment after env-var stripping)
+    "gsd-tools\\.cjs",
+]
+
+[allow.command_wrappers]
+description = "Command execution wrappers"
+patterns = [
+    "^unbuffer",
+    "^stdbuf",
+    "^setsid",
+    "^parallel",
+    "^chronic",
+    "^sponge",
+    # Poetry runner
+    "^poetrun run ",
+]
+
+[allow.javascript]
+description = "JavaScript/Node.js ecosystem"
+patterns = [
+    "^npm ",
+    "^npx ",
+    "^node ",
+    "^yarn ",
+    "^pnpm ",
+    "^bun ",
+    "^deno ",
+]
+
+[allow.git]
+description = "Git and GitHub CLI"
+patterns = [
+    "^git ",
+    "^gh ",
+    # cd <dir> && git <op>: common pattern for running git in a specific directory.
+    # The validator's split logic already handles this (each segment is validated
+    # independently), so this entry matches the full compound before splitting
+    # as an explicit documentation and fallback.
+    # Positive list of safe verbs: excludes force-push, hard-reset, etc. so
+    # ask.git_destructive is not bypassed if this ever matches as a full compound.
+    "^cd .+ && git (add|status|diff|log|show|fetch|pull|checkout|switch|branch|commit|remote|tag|submodule|stash)( |$)",
+]
+
+[allow.github_lifecycle]
+description = "GitHub CLI lifecycle operations that are reversible or purely additive"
+# gh issue close/reopen: trivially reversible (reopen restores the issue)
+# gh issue comment / gh pr comment: additive only, never destroys data
+# Note: gh pr merge, gh pr close, gh repo delete remain in ask.github_mutations
+patterns = [
+    "^gh issue close",
+    "^gh issue reopen",
+    "^gh issue comment",
+    "^gh pr comment",
+]
+
+[allow.github_labels]
+description = "GitHub CLI label management (read and create operations)"
+patterns = [
+    "^gh label list",
+    "^gh label create ",
+    "^gh label edit ",
+]
+
+[ask.github_label_delete]
+description = "GitHub CLI label deletion"
+patterns = [
+    "^gh label delete ",
+]
+
+[allow.python]
+description = "Python ecosystem"
+patterns = [
+    "^python",
+    "^pytest",
+    "^poetry ",
+    "^pip",
+    "^pipx ",
+    "^uv ",
+    "^pdm ",
+    "^hatch ",
+]
+
+[allow.go]
+description = "Go toolchain"
+patterns = [
+    "^go ",
+    "^gofmt",
+    "^goimports",
+    "^golangci-lint",
+]
+
+[allow.rust]
+description = "Rust toolchain"
+patterns = [
+    "^cargo ",
+    "^rustc",
+    "^rustfmt",
+    "^clippy",
+]
+
+[allow.java]
+description = "Java/JVM ecosystem"
+patterns = [
+    "^java ",
+    "^javac",
+    "^mvn ",
+    "^gradle",
+    "^\\./gradlew",
+    "^scala",
+    "^sbt ",
+    "^kotlin",
+]
+
+[allow.ruby]
+description = "Ruby ecosystem"
+patterns = [
+    "^ruby ",
+    "^gem ",
+    "^bundle",
+    "^rake ",
+    "^rails ",
+    "^rspec",
+    "^rubocop",
+]
+
+[allow.php]
+description = "PHP ecosystem"
+patterns = [
+    "^php ",
+    "^composer",
+    "^phpunit",
+    "^phpstan",
+]
+
+[allow.other_languages]
+description = "Other language runtimes"
+patterns = [
+    "^dotnet",
+    "^elixir",
+    "^mix ",
+    "^iex",
+    "^swift",
+    "^zig ",
+    "^lua ",
+    "^luarocks",
+    "^perl ",
+]
+
+[allow.image_tools]
+description = "Image processing and conversion tools"
+patterns = [
+    "^convert ",
+    "^identify ",
+    "^inkscape",
+    "^magick ",
+    "^ffmpeg",
+    "^ffprobe",
+]
+
+[allow.build_tools]
+description = "Build systems and task runners"
+patterns = [
+    "^make",
+    "^cmake",
+    "^ninja",
+    "^meson",
+    "^bazel",
+    "^just",
+    "^task ",
+    "^task$",
+]
+
+[allow.linters]
+description = "Linters and formatters"
+patterns = [
+    "^ruff ",
+    "^mypy",
+    "^black ",
+    "^isort",
+    "^flake8",
+    "^pylint",
+    "^bandit",
+    "^yamllint",
+    "^shellcheck",
+    "^actionlint",
+    "^prettier",
+    "^eslint",
+    "^biome",
+    "^tsc",
+    "^pre-commit",
+]
+
+[allow.testing]
+description = "Testing frameworks and automation"
+patterns = [
+    "^jest",
+    "^vitest",
+    "^mocha",
+    "^playwright",
+    "^cypress",
+    "^tox",
+    "^nox",
+    "^coverage ",
+]
+
+[allow.js_bundlers]
+description = "JavaScript/CSS bundlers and build tools"
+patterns = [
+    "^webpack",
+    "^vite",
+    "^esbuild",
+    "^rollup",
+    "^parcel",
+    "^turbo",
+    "^nx ",
+    "^lerna",
+    "^sass ",
+    "^postcss",
+    "^tailwindcss",
+    "^bunx ",
+    "^wasm-pack",
+]
+
+[allow.local_scripts]
+description = "Local project test and utility scripts"
+patterns = [
+    # Test scripts in tests/ directory
+    "^\\./tests/",
+    "^tests/",
+    # Utility scripts in scripts/ directory
+    "^\\./scripts/",
+    "^scripts/",
+    # Common script patterns
+    "^\\./bin/",
+    "^bin/",
+    # Shell interpreter + known safe directories (e.g. bash scripts/foo.sh)
+    "^(bash|sh|zsh) tests/",
+    "^(bash|sh|zsh) scripts/",
+    "^(bash|sh|zsh) bin/",
+]
+
+[allow.databases]
+description = "Database clients"
+patterns = [
+    "^psql",
+    "^mysql",
+    "^sqlite3",
+    "^mongosh",
+    "^redis-cli",
+]
+
+[allow.cloud_cli]
+description = "Cloud CLIs (mutations blocked by ask patterns)"
+patterns = [
+    "^aws ",
+    "^gcloud ",
+    "^az ",
+    "^terraform ",
+    "^pulumi ",
+    "^ansible ",
+    "^vagrant",
+    "^packer",
+    # Supabase
+    "^supabase",
+    # Firecrawl (read-only scraping/search CLI)
+    "^firecrawl",
+]
+
+[allow.file_operations]
+description = "Common file operations"
+patterns = [
+    "^ls",
+    "^cat ",
+    "^head ",
+    "^tail ",
+    "^wc ",
+    "^grep",
+    "^rg ",
+    "^ag ",
+    "^fd ",
+    "^fzf",
+    "^find ",
+    "^pwd$",
+    "^env$",
+    "^printenv",
+    "^which ",
+    "^whereis",
+    "^type ",
+    "^file ",
+    "^stat ",
+    "^tree",
+    "^cloc",
+    "^tokei",
+    "^mkdir",
+    "^rmdir",
+    "^cp ",
+    "^mv ",
+    "^ln ",
+    "^chmod ",
+    "^touch ",
+    "^echo( |$)",
+    "^printf",
+    "^sort",
+    "^uniq",
+    "^cut ",
+    "^tr ",
+    "^xargs",
+    "^tar ",
+    "^zip",
+    "^unzip",
+    "^gzip",
+    "^gunzip",
+    "^zcat",
+    "^du ",
+    "^df",
+    "^free",
+    "^test ",
+    "^\\[ ",
+    "^tee ",
+    "^awk",
+    "^sed ",
+    "^jq",
+    "^yq",
+    "^rsync ",
+    "^curl",
+    "^wget",
+    "^http ",
+    "^httpie",
+]
+
+[allow.find_exec_readonly]
+description = "find -exec continuation segments with read-only commands"
+# When 'find ... -exec cmd {} \; -exec cmd2 {} \;' is split on ';', the second
+# and subsequent -exec clauses become orphaned segments starting with '-exec'.
+# These are safe to allow when the command is a read-only viewer.
+patterns = [
+    "^-exec\\s+(cat|echo|head|tail|grep|wc|stat|file|ls|print|printf)\\s",
+]
+
+[allow.process_inspection]
+description = "Process inspection (not control)"
+patterns = [
+    "^lsof",
+    "^pgrep",
+    "^ps ",
+    "^top",
+    "^htop",
+    "^timeout ",
+    "^time ",
+    "^date",
+    "^cal",
+    "^uptime",
+    "^uname",
+    "^hostname",
+    "^whoami",
+    "^id",
+    "^groups",
+]
+
+[allow.diff_patch]
+description = "Diff and patch tools"
+patterns = [
+    "^diff",
+    "^colordiff",
+    "^delta",
+    "^patch",
+]
+
+[allow.checksums]
+description = "Checksums and encoding"
+patterns = [
+    "^md5sum",
+    "^sha256sum",
+    "^sha1sum",
+    "^base64",
+    "^xxd",
+    "^hexdump",
+    "^openssl",
+    "^ssh-keygen",
+]
+
+[allow.network_diagnostics]
+description = "Network diagnostic tools"
+patterns = [
+    "^dig ",
+    "^nslookup",
+    "^host ",
+    "^ping",
+    "^traceroute",
+    "^mtr",
+    "^ss ",
+    "^netstat",
+    "^ip ",
+    "^ifconfig",
+    "^nc ",
+    "^whois",
+    "^ethtool [a-z]",
+    "^nmcli (connection|device|general|radio|monitor) (show|list|status|help)",
+    "^tc (qdisc|filter|class|route) (show|list|get) ",
+    "^sysctl [a-z]",
+]
+
+[allow.docker]
+description = "Docker (mutations blocked by ask patterns)"
+patterns = [
+    "^docker ",
+    "^docker-compose",
+    "^podman",
+]
+
+[allow.kubernetes]
+description = "Kubernetes (mutations blocked by ask patterns)"
+# NOTE: kubectl exec is excluded here - it's handled by allow.kubernetes_exec_readonly
+# for read-only commands, and falls through to ask for everything else
+patterns = [
+    # Negative lookahead to exclude 'exec' subcommand, with \S to ensure
+    # we check after consuming ALL whitespace (prevents double-space bypass)
+    "^kubectl\\s+(?!exec\\b)\\S",
+    "^k3s kubectl\\s+(?!exec\\b)\\S",
+    "^k9s",
+    "^helm ",
+    "^helmfile ",
+    "^kustomize",
+    "^skaffold",
+    "^istioctl",
+    "^argocd",
+    "^flux",
+]
+
+[allow.kubernetes_exec_readonly]
+description = "kubectl exec with read-only commands (other exec falls through to ask)"
+# NOTE: Only truly read-only commands are allowed here. Commands that can execute
+# arbitrary code (env with args, awk, sed, find) are excluded for security.
+patterns = [
+    # Read file contents
+    "^kubectl exec .* -- cat ",
+    "^kubectl exec .* -- head ",
+    "^kubectl exec .* -- tail ",
+    "^kubectl exec .* -- less ",
+    "^kubectl exec .* -- more ",
+    # List/inspect files (note: find excluded due to -exec capability)
+    "^kubectl exec .* -- ls",
+    "^kubectl exec .* -- stat ",
+    "^kubectl exec .* -- file ",
+    "^kubectl exec .* -- wc ",
+    # Environment and process info
+    # NOTE: Only bare 'env' allowed - 'env VAR=x cmd' can run arbitrary commands
+    "^kubectl exec .* -- env$",
+    "^kubectl exec .* -- printenv",
+    "^kubectl exec .* -- ps ",
+    "^kubectl exec .* -- ps$",
+    "^kubectl exec .* -- top ",
+    "^kubectl exec .* -- whoami",
+    "^kubectl exec .* -- id$",
+    "^kubectl exec .* -- id ",
+    "^kubectl exec .* -- pwd$",
+    "^kubectl exec .* -- hostname",
+    "^kubectl exec .* -- uname",
+    # Search (note: awk/sed excluded - can execute commands or modify files)
+    "^kubectl exec .* -- grep ",
+    # Disk/network info (note: ip excluded - can modify network config)
+    "^kubectl exec .* -- df ",
+    "^kubectl exec .* -- df$",
+    "^kubectl exec .* -- du ",
+    "^kubectl exec .* -- free",
+    "^kubectl exec .* -- netstat",
+    "^kubectl exec .* -- ss ",
+    # Date/time
+    "^kubectl exec .* -- date",
+    "^kubectl exec .* -- uptime",
+    # Same patterns for k3s (only safe commands)
+    "^k3s kubectl exec .* -- cat ",
+    "^k3s kubectl exec .* -- ls",
+    "^k3s kubectl exec .* -- env$",
+    "^k3s kubectl exec .* -- ps",
+    "^k3s kubectl exec .* -- grep ",
+    "^k3s kubectl exec .* -- head ",
+    "^k3s kubectl exec .* -- tail ",
+]
+
+[allow.kubernetes_exec_database]
+description = "kubectl exec database CLI tools (mutations blocked by ask.kubectl_exec_db_mutations)"
+# NOTE: Destructive SQL (DROP, DELETE, INSERT, etc.) is caught by
+# ask.kubectl_exec_db_mutations which is evaluated BEFORE these allow patterns.
+# What remains are read-only queries (SELECT, \d, \dt, etc.) and
+# psql meta-commands which are safe to auto-approve.
+patterns = [
+    # Direct psql (any flags like -U, -d, -c, -t, -tc, etc.)
+    "^kubectl exec .* -- psql ",
+    "^kubectl exec .* -- psql$",
+    # psql with env prefix (PGPASSWORD=...)
+    "^kubectl exec .* -- env .* psql",
+    # Direct mysql
+    "^kubectl exec .* -- mysql ",
+    "^kubectl exec .* -- mysql$",
+    # Same for k3s
+    "^k3s kubectl exec .* -- psql ",
+    "^k3s kubectl exec .* -- env .* psql",
+    "^k3s kubectl exec .* -- mysql ",
+]
+
+[allow.kubernetes_exec_shell_commands]
+description = "kubectl exec with bash -c wrappers and common read-only inner commands"
+# The bash -c wrapper is the standard Kubernetes pattern for setting env vars
+# (e.g. PGPASSWORD) before invoking a database client.
+# Safety: ask.kubectl_exec_db_mutations (evaluated before allow patterns) catches
+# destructive SQL (DROP, DELETE, INSERT, etc.) even through bash -c wrappers,
+# since its patterns use .* to match across the 'bash -c' prefix.
+# ask.dangerous_pipelines catches 'find.*-exec.*rm' and 'find.*-delete' patterns.
+# Only non-destructive operations reach these allow patterns.
+patterns = [
+    # bash -c wrapping psql with env var prefix (e.g. PGPASSWORD=$(kubectl get secret ...))
+    "kubectl exec .* -- bash -c '.*psql",
+    "kubectl exec .* -- bash -c \".*psql",
+    # HTTP health checks and API endpoint inspection inside pods.
+    # Tradeoff: curl with -o/--output can write to arbitrary paths inside the pod.
+    # This is accepted because: (a) blast radius is pod-local, (b) the primary use
+    # case is health checks (curl http://localhost:8080/healthz) which far outweigh
+    # the file-write risk. Future: consider asking if '-o ' or '--output ' is present.
+    "kubectl exec .* -- wget ",
+    "kubectl exec .* -- curl ",
+    # File search inside pods (find.*-exec.*rm, find.*-exec.*mv, find.*-delete
+    # are caught by ask.dangerous_pipelines which is evaluated before allow patterns)
+    "kubectl exec .* -- find ",
+    # k3s variants (same tradeoffs apply as kubectl above)
+    "k3s kubectl exec .* -- bash -c '.*psql",
+    "k3s kubectl exec .* -- bash -c \".*psql",
+    "k3s kubectl exec .* -- wget ",
+    "k3s kubectl exec .* -- curl ",
+    "k3s kubectl exec .* -- find ",
+]
+
+[allow.secrets]
+description = "Secrets decryption"
+patterns = [
+    "^sops -d",
+    "^sops --decrypt",
+    "^age ",
+]
+
+[allow.version_managers]
+description = "Language version managers"
+patterns = [
+    "^nvm ",
+    "^pyenv",
+    "^rbenv",
+    "^asdf",
+    "^volta",
+    "^fnm",
+    "^direnv",
+]
+
+[allow.venv]
+description = "Virtual environment binaries"
+patterns = [
+    "^\\.venv/bin/",
+    "^venv/bin/",
+    # Absolute paths to .venv/bin/ (worktree agents use absolute paths)
+    "/\\.venv/bin/",
+    "/venv/bin/",
+    # Poetry virtualenvs (common path: ~/.cache/pypoetry/virtualenvs/*/bin/)
+    "pypoetry/virtualenvs/.*/bin/",
+    # Conda environments
+    "conda.*/envs/.*/bin/",
+    # pipx
+    "pipx/venvs/.*/bin/",
+    # Temporary venvs in /tmp (e.g. /tmp/test-venv/bin/pip, /tmp/test-venv/bin/pytest)
+    "^/tmp/[^/]+/bin/",
+]
+
+[allow.system_readonly]
+description = "Read-only system inspection"
+patterns = [
+    "^tailscale",
+    "^mount$",
+    "^dmesg",
+    "^journalctl",
+    "^systemctl status",
+    "^systemctl show",
+    "^systemctl list",
+    "^systemctl is-",
+    "^systemctl cat",
+    "^crontab -l",
+    "^service .* status",
+    "^getent ",
+    # locale: add word boundary to avoid matching localectl
+    "^locale(\\s|$)",
+    # timedatectl: only read-only subcommands
+    "^timedatectl$",
+    "^timedatectl status",
+    "^timedatectl timesync-status",
+    "^timedatectl show-timesync",
+    "^timedatectl show$",
+    "^timedatectl show ",
+    # loginctl: only read-only subcommands
+    "^loginctl list-sessions",
+    "^loginctl session-status",
+    "^loginctl list-users",
+    "^loginctl user-status",
+    "^loginctl show-session",
+    "^loginctl show-user",
+    "^loginctl list-seats",
+    "^loginctl show-seat",
+]
+
+[allow.terminal_multiplexers]
+description = "Terminal multiplexer read-only operations"
+patterns = [
+    # tmux read-only commands - list/show/display
+    "^tmux ls$",
+    "^tmux ls ",
+    "^tmux list-",
+    "^tmux show-",
+    "^tmux display-",
+    "^tmux capture-pane",
+    "^tmux has-session",
+    "^tmux info",
+    "^tmux server-info",
+    "^tmux wait-for",
+    # screen read-only commands
+    "^screen -ls",
+    "^screen -list",
+    "^screen -wipe",
+]
+
+[allow.backup_tools]
+description = "Backup and restore tools"
+patterns = [
+    "^restic",
+    "^resticprofile",
+]
+
+[allow.gpu_tools]
+description = "GPU monitoring tools"
+patterns = [
+    "^nvidia-smi",
+    "^rocm-smi",
+    "^nvtop",
+]
+
+[allow.package_info]
+description = "Package manager read-only queries"
+patterns = [
+    "^apt list",
+    "^apt show",
+    "^apt search",
+    "^apt-cache",
+    "^apt policy",
+    "^dpkg -l",
+    "^dpkg -L",
+    "^dpkg -s",
+    "^dpkg --list",
+    "^snap list",
+    "^snap info",
+    "^flatpak list",
+    "^flatpak info",
+]
+
+[allow.mail_tools]
+description = "Mail tools (sendmail, msmtp, mail)"
+patterns = [
+    "^sendmail",
+    "^msmtp",
+    "^mail ",
+]
+
+[allow.benchmarks]
+description = "Benchmarking tools"
+patterns = [
+    "^phoronix-test-suite",
+    "^sysbench",
+    "^fio ",
+    "^iperf",
+]
+
+[allow.swap_memory]
+description = "Swap and memory inspection"
+patterns = [
+    "^swapon",
+    "^vmstat",
+    "^iostat",
+    "^sar ",
+]
+
+[allow.absolute_path_executables]
+description = "System and user-installed binaries by absolute path"
+patterns = [
+    "^/usr/bin/",
+    "^/usr/local/bin/",
+    "^/home/[^/]+/\\.local/bin/",
+    "^~/\\.local/bin/",
+]
+
+[allow.file_deletion_relative]
+description = "File removal on relative paths (project files, build artifacts)"
+# Safe because: relative paths are within the project directory.
+# Catastrophic patterns (/, ~, *, .) are caught by deny.catastrophic_deletion
+# which runs BEFORE this allow pattern.
+# $ is excluded from the first-char class to prevent 'rm -rf $HOME' from being auto-approved.
+patterns = [
+    # rm with any flags + relative path (not starting with /, ~, or $)
+    "^rm\\s+(-[a-zA-Z]+\\s+)*[^-/~$\\s]",
+    # rm with any flags + explicit ./ prefix
+    "^rm\\s+(-[a-zA-Z]+\\s+)*\\./",
+]
+
+# allow.project_file_deletion was removed: project file deletion is now handled
+# dynamically at runtime via _inject_git_root_patterns() in validate-bash.py.
+# When Claude is invoked inside a git repo (cwd/.git exists), rm on any path
+# under that repo root is auto-approved and the .git directory is protected.
+
+[allow.temp_cleanup]
+description = "Temp file cleanup"
+patterns = [
+    "^rm -rf /tmp/",
+    "^rm -f /tmp/",
+    "^rm /tmp/",
+    "^rm -rf /var/tmp/",
+    "^rm -f /var/tmp/",
+    "^rm /var/tmp/",
+]
+
+[allow.clipboard_opener]
+description = "Clipboard utilities and URL openers"
+patterns = [
+    "^pbcopy",
+    "^pbpaste",
+    "^xclip",
+    "^xsel",
+    "^wl-copy",
+    "^wl-paste",
+    "^xdg-open ",
+    # Restrict open to URLs only; bare 'open -a Terminal' or 'open malware.app' would prompt
+    "^open\\s+https?://",
+]
+
+[allow.file_truncate]
+description = "File truncation on relative paths, /tmp, and /var/tmp"
+patterns = [
+    # truncate with flags + relative path (not starting with /, ~, or $)
+    "^truncate\\s+(-[a-zA-Z]+\\s+)*[^-/~$\\s]",
+    # truncate with flags + explicit ./ prefix
+    "^truncate\\s+(-[a-zA-Z]+\\s+)*\\./",
+    # truncate on /tmp/ and /var/tmp/ (log files, test fixtures)
+    "^truncate\\s+(-[a-zA-Z]+\\s+)*/tmp/",
+    "^truncate\\s+(-[a-zA-Z]+\\s+)*/var/tmp/",
+]
+
+[allow.command_utilities]
+description = "Command execution utilities"
+patterns = [
+    "^command -v",
+    "^env ",
+    "^exec ",
+    "^nohup ",
+    "^nice ",
+    "^ionice ",
+]
