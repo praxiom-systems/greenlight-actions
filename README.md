@@ -6,14 +6,22 @@ Gate CI behind manual approval. Zero wasted minutes.
 
 Greenlight adds a gate to your existing CI pipeline. Workflows still trigger on every push, but the actual work pauses until a developer clicks "Run CI" on the pull request. No more burned minutes on WIP commits, typo fixes, or mid-rebase pushes.
 
-<!-- TODO: Add screenshot of PR check with "Run CI" button -->
+<p align="center">
+  <img src="assets/screenshots/02-run-ci-button.png" alt="Greenlight Actions check with Run CI button" width="700">
+</p>
 
 ---
 
 ## How It Works
 
 1. **You push code to a PR.** Your workflow triggers normally, but the CI job pauses at the Greenlight gate. A check appears with a "Run CI" button.
+
+   <img src="assets/screenshots/01-pr-checks-waiting.png" alt="PR checks waiting for approval" width="600">
+
 2. **You click when ready.** One click approves the gate and your CI job continues. No context switching, no CLI commands, no waiting for a build you did not want.
+
+   <img src="assets/screenshots/03-ci-running.png" alt="CI running after approval" width="600">
+
 3. **You push again, the gate resets.** Every new commit re-triggers the workflow and pauses it again, so stale green checks never linger on changed code.
 
 Your workflow file stays the same. Greenlight only controls _when_ the work runs.
