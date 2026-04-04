@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon/greenlight-icon-256.png" alt="Greenlight Actions icon" width="128">
+</p>
+
 # Greenlight Actions
 
 Gate CI behind manual approval. Zero wasted minutes.
@@ -9,7 +13,10 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
 **Free.** One-click install, one line of YAML, setup in under two minutes.
 
 <p align="center">
-  <img src="assets/screenshots/02-run-ci-button.png" alt="Greenlight Actions check with Run CI button" width="700">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-waiting-dark.png">
+    <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="700">
+  </picture>
 </p>
 
 ---
@@ -18,13 +25,26 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
 
 1. **You push code to a PR.** Your workflow triggers normally, but the CI job pauses at the Greenlight gate. A check appears with a "Run CI" button.
 
-   <img src="assets/screenshots/01-pr-checks-waiting.png" alt="PR checks waiting for approval" width="600">
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-pending-dark.png">
+     <img src="assets/screenshots/product/checks-pending-light.png" alt="PR checks waiting for approval" width="600">
+   </picture>
 
 2. **You click when ready.** One click approves the gate and your CI job continues. No context switching, no CLI commands, no waiting for a build you did not want.
 
-   <img src="assets/screenshots/03-ci-running.png" alt="CI running after approval" width="600">
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-running-dark.png">
+     <img src="assets/screenshots/product/checks-running-light.png" alt="CI running after approval" width="600">
+   </picture>
 
-3. **You push again, the gate resets.** Every new commit re-triggers the workflow and pauses it again, so stale green checks never linger on changed code.
+3. **CI finishes and checks go green.** All checks pass and you're ready to merge.
+
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-passed-dark.png">
+     <img src="assets/screenshots/product/checks-passed-light.png" alt="All checks passed" width="600">
+   </picture>
+
+4. **You push again, the gate resets.** Every new commit re-triggers the workflow and pauses it again, so stale green checks never linger on changed code.
 
 Your workflow file stays the same. Greenlight only controls _when_ the work runs.
 
@@ -38,7 +58,10 @@ Your workflow file stays the same. Greenlight only controls _when_ the work runs
 
 [Install Greenlight](https://github.com/apps/greenlight-actions) on your GitHub organization or repositories. Setup takes under a minute. The `greenlight` environment is created automatically — here's what it looks like:
 
-<img src="assets/screenshots/06-environment-setup.png" alt="Greenlight environment configuration" width="700">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/settings-environment-dark.png">
+  <img src="assets/screenshots/product/settings-environment-light.png" alt="Greenlight environment configuration" width="700">
+</picture>
 
 ### 2. Add the Greenlight Environment to Your Job
 
