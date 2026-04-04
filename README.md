@@ -16,18 +16,11 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
   <img src="assets/banners/greenlight-banner-steps.png" alt="Greenlight Actions overview — push triggers gate, one-click approval, slash CI credit usage, stateless and secure">
 </p>
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-waiting-dark.png">
-    <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="80%">
-  </picture>
-</p>
-
 ---
 
 ## How It Works
 
-1. **You push code to a PR.** Your workflow triggers normally, but the CI job pauses at the Greenlight gate. A check appears with a "Run CI" button.
+1. **You push code to a PR.** Your workflow triggers normally, but the CI job pauses at the Greenlight gate. The merge box shows checks are waiting.
 
    <p align="center">
      <picture>
@@ -36,7 +29,16 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
      </picture>
    </p>
 
-2. **You click when ready.** One click approves the gate and your CI job continues. No context switching, no CLI commands, no waiting for a build you did not want.
+2. **You click "Run CI" when ready.** Open the Checks tab to find the "Run CI" button. One click approves the gate and your CI job starts.
+
+   <p align="center">
+     <picture>
+       <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-waiting-dark.png">
+       <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="80%">
+     </picture>
+   </p>
+
+3. **CI runs.** Your workflow continues and checks start executing.
 
    <p align="center">
      <picture>
@@ -45,7 +47,7 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
      </picture>
    </p>
 
-3. **CI finishes and checks go green.** All checks pass and you're ready to merge.
+4. **Checks go green.** All checks pass and you're ready to merge.
 
    <p align="center">
      <picture>
@@ -54,7 +56,7 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
      </picture>
    </p>
 
-4. **You push again, the gate resets.** Every new commit re-triggers the workflow and pauses it again, so stale green checks never linger on changed code.
+5. **You push again, the gate resets.** Every new commit re-triggers the workflow and pauses it again, so stale green checks never linger on changed code.
 
 Your workflow file stays the same. Greenlight only controls _when_ the work runs.
 
