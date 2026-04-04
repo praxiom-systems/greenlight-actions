@@ -2,7 +2,7 @@
   <img src="assets/icon/greenlight-icon-256.png" alt="Greenlight Actions icon" width="128">
 </p>
 
-# Greenlight Actions
+<h1 align="center">Greenlight Actions</h1>
 
 Gate CI behind manual approval. Zero wasted minutes.
 
@@ -25,7 +25,7 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
    <p align="center">
      <picture>
        <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-pending-dark.png">
-       <img src="assets/screenshots/product/checks-pending-light.png" alt="PR checks waiting for approval" width="80%">
+       <img src="assets/screenshots/product/checks-pending-light.png" alt="PR checks waiting for approval" width="90%">
      </picture>
    </p>
 
@@ -34,7 +34,7 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
    <p align="center">
      <picture>
        <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-waiting-dark.png">
-       <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="80%">
+       <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="90%">
      </picture>
    </p>
 
@@ -43,7 +43,7 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
    <p align="center">
      <picture>
        <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-running-dark.png">
-       <img src="assets/screenshots/product/checks-running-light.png" alt="CI running after approval" width="80%">
+       <img src="assets/screenshots/product/checks-running-light.png" alt="CI running after approval" width="90%">
      </picture>
    </p>
 
@@ -52,7 +52,7 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
    <p align="center">
      <picture>
        <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-passed-dark.png">
-       <img src="assets/screenshots/product/checks-passed-light.png" alt="All checks passed" width="80%">
+       <img src="assets/screenshots/product/checks-passed-light.png" alt="All checks passed" width="90%">
      </picture>
    </p>
 
@@ -73,7 +73,7 @@ Your workflow file stays the same. Greenlight only controls _when_ the work runs
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/settings-environment-dark.png">
-    <img src="assets/screenshots/product/settings-environment-light.png" alt="Greenlight environment configuration" width="80%">
+    <img src="assets/screenshots/product/settings-environment-light.png" alt="Greenlight environment configuration" width="90%">
   </picture>
 </p>
 
