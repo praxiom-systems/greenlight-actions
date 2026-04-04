@@ -13,6 +13,10 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
 **Free.** One-click install, one line of YAML, setup in under two minutes.
 
 <p align="center">
+  <img src="assets/banners/greenlight-banner-steps.png" alt="Greenlight Actions overview — push triggers gate, one-click approval, slash CI credit usage, stateless and secure" width="700">
+</p>
+
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-waiting-dark.png">
     <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="700">
