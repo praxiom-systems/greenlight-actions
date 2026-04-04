@@ -13,13 +13,13 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
 **Free.** One-click install, one line of YAML, setup in under two minutes.
 
 <p align="center">
-  <img src="assets/banners/greenlight-banner-steps.png" alt="Greenlight Actions overview — push triggers gate, one-click approval, slash CI credit usage, stateless and secure" width="700">
+  <img src="assets/banners/greenlight-banner-steps.png" alt="Greenlight Actions overview — push triggers gate, one-click approval, slash CI credit usage, stateless and secure">
 </p>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-waiting-dark.png">
-    <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="700">
+    <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="80%">
   </picture>
 </p>
 
@@ -31,21 +31,21 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
 
    <picture>
      <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-pending-dark.png">
-     <img src="assets/screenshots/product/checks-pending-light.png" alt="PR checks waiting for approval" width="600">
+     <img src="assets/screenshots/product/checks-pending-light.png" alt="PR checks waiting for approval" width="80%">
    </picture>
 
 2. **You click when ready.** One click approves the gate and your CI job continues. No context switching, no CLI commands, no waiting for a build you did not want.
 
    <picture>
      <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-running-dark.png">
-     <img src="assets/screenshots/product/checks-running-light.png" alt="CI running after approval" width="600">
+     <img src="assets/screenshots/product/checks-running-light.png" alt="CI running after approval" width="80%">
    </picture>
 
 3. **CI finishes and checks go green.** All checks pass and you're ready to merge.
 
    <picture>
      <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-passed-dark.png">
-     <img src="assets/screenshots/product/checks-passed-light.png" alt="All checks passed" width="600">
+     <img src="assets/screenshots/product/checks-passed-light.png" alt="All checks passed" width="80%">
    </picture>
 
 4. **You push again, the gate resets.** Every new commit re-triggers the workflow and pauses it again, so stale green checks never linger on changed code.
@@ -64,7 +64,7 @@ Your workflow file stays the same. Greenlight only controls _when_ the work runs
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/settings-environment-dark.png">
-  <img src="assets/screenshots/product/settings-environment-light.png" alt="Greenlight environment configuration" width="700">
+  <img src="assets/screenshots/product/settings-environment-light.png" alt="Greenlight environment configuration" width="80%">
 </picture>
 
 ### 2. Add the Greenlight Environment to Your Job
