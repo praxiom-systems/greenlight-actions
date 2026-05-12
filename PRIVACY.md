@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Effective date:** April 3, 2026
+**Effective date:** May 12, 2026
 
 Greenlight Actions is operated by [Praxiom Systems LLC](https://praxiomsystems.com/).
 
@@ -27,9 +27,9 @@ GitHub sends webhook payloads containing:
 - Repository name and owner
 - Pull request branch and commit SHA
 - Workflow run ID and environment name
-- PR comment body, commenter login, and repository permission level when processing `/greenlight` comments
+- For the `issue_comment` webhook, the body and author metadata for newly-created issue and PR comments on installed repositories
 
-This data is used solely to create and update check runs and approve deployment protection rules. It is not logged, stored, or shared.
+Greenlight checks whether each comment is on a PR and matches `/greenlight` or `/greenlight run`. Non-matching comments and regular issue comments are ignored. Webhook payloads are used solely to create and update check runs, approve deployment protection rules, and process valid PR comment triggers. They are not logged, stored, or shared.
 
 ## Third-Party Services
 
