@@ -8,7 +8,7 @@ Gate CI behind manual approval. Zero wasted minutes.
 
 [![Install](https://img.shields.io/badge/Install-GitHub_Marketplace-blue)](https://github.com/apps/greenlight-actions)
 
-Every push triggers your CI. Greenlight pauses the expensive part until you click "Run CI" — so WIP commits, typo fixes, and mid-rebase pushes cost you nothing.
+Every push triggers your CI. Greenlight pauses the expensive part until you click "Run CI" or comment `/greenlight` — so WIP commits, typo fixes, and mid-rebase pushes cost you nothing.
 
 **Free.** One-click install, one line of YAML, setup in under two minutes.
 
@@ -29,7 +29,7 @@ Every push triggers your CI. Greenlight pauses the expensive part until you clic
      </picture>
    </p>
 
-2. **You click "Run CI" when ready.** Open the Checks tab to find the "Run CI" button. One click approves the gate and your CI job starts.
+2. **You trigger CI when ready.** Open the Checks tab to click "Run CI", or comment `/greenlight` on the PR. Greenlight approves the gate and your CI job starts.
 
    <p align="center">
      <picture>
@@ -99,7 +99,7 @@ jobs:
 
 ### 3. Open a Pull Request
 
-Push a branch and open a PR. Your workflow will start, pause at the `greenlight` environment gate, and you will see a "Greenlight Actions: CI" check with a "Run CI" button. Click it when your code is ready.
+Push a branch and open a PR. Your workflow will start, pause at the `greenlight` environment gate, and you will see a "Greenlight Actions: CI" check with a "Run CI" button. Click it or comment `/greenlight` when your code is ready.
 
 That is it. No config files, no dashboard, no CLI. Setup takes under two minutes.
 
@@ -135,7 +135,7 @@ On a pull request, the job uses the `greenlight` environment and pauses at the g
 
 | What Changes | Before Greenlight | After Greenlight |
 |---|---|---|
-| CI minutes on WIP pushes | Every push burns compute | Workflows pause until you click "Run CI" — zero minutes burned |
+| CI minutes on WIP pushes | Every push burns compute | Workflows pause until you click "Run CI" or comment `/greenlight` — zero minutes burned |
 | Red checks on incomplete code | Failures train your team to ignore CI | Checks stay neutral until you explicitly trigger |
 | Stale green checks | Outdated commits show false confidence | Every push resets the gate automatically |
 | Setup complexity | Custom scripts, branch rules, or Enterprise plans | One line of YAML, free on all GitHub plans |
@@ -162,7 +162,7 @@ On a pull request, the job uses the `greenlight` environment and pauses at the g
 Greenlight is designed to touch as little as possible.
 
 - **Stateless.** No database, no file storage, no persistent state of any kind. Every request is processed and forgotten.
-- **No code access.** Greenlight never reads, clones, or stores your source code. It only interacts with the Checks and Deployments APIs.
+- **No code access.** Greenlight never reads, clones, or stores your source code. It only interacts with the GitHub APIs needed to create checks, approve deployments, read PR metadata, and process `/greenlight` comments.
 - **No secrets exposure.** It never sees or handles your repository secrets, tokens, or environment variables.
 - **No logging of content.** Webhook payloads are processed in memory and discarded. Nothing is written to disk or sent to third parties.
 - **Minimal permissions.** Only the permissions strictly required to create check runs and approve deployment protection rules.
@@ -176,12 +176,16 @@ Greenlight requests the minimum permissions required to function:
 | **Checks** | Read & Write | Create the "Greenlight Actions: CI" check run on PRs, update its status when CI starts |
 | **Actions** | Read & Write | Approve deployment protection rules to allow gated CI jobs to proceed |
 | **Deployments** | Read & Write | Respond to deployment protection rule requests from GitHub |
+| **Issues** | Read | Receive PR conversation comments for the `/greenlight` command |
 | **Pull Requests** | Read | Read PR metadata (branch, SHA, repository) to associate checks with the correct commit |
 
-The app subscribes to two webhook events:
+Existing installations must approve the new **Issues: Read** permission before `/greenlight` comments will work.
+
+Greenlight uses these webhook events:
 
 - **Deployment protection rule** (`requested`) — to create the check run with a "Run CI" button when a workflow pauses at the `greenlight` environment gate
 - **Check run** (`requested_action`) — to respond when a developer clicks the "Run CI" button
+- **Issue comment** (`created`) — to respond when a commenter with write, maintain, or admin access adds `/greenlight` or `/greenlight run` to a PR conversation
 
 ---
 
@@ -193,11 +197,17 @@ Make sure the job in your workflow has `environment: greenlight` set. The Greenl
 **The check appeared but nothing happens when I click "Run CI".**
 Verify that the Greenlight app is installed on the repository (not just the organization). Check Settings > Integrations > GitHub Apps.
 
+**Can I trigger Greenlight from a PR comment?**
+Yes. Comment `/greenlight` or `/greenlight run` in the PR conversation. Greenlight ignores comments on regular issues and only accepts PR comments from users with write, maintain, or admin access.
+
+**Why does Greenlight need Issues: Read?**
+GitHub sends PR conversation comments through the Issue comment webhook. Greenlight uses that permission only to receive `/greenlight` comments on PRs.
+
 **Does Greenlight work on forked PRs?**
 No. Deployment protection rules are a repository-level feature and do not apply to workflows triggered from forks.
 
 **Can I gate multiple jobs in the same workflow?**
-Yes. Add `environment: greenlight` to each job you want to gate. Each job gets its own independent "Run CI" button.
+Yes. Add `environment: greenlight` to each job you want to gate. Each job gets its own independent "Run CI" button, and a single `/greenlight` PR comment approves all pending Greenlight checks for the current PR commit.
 
 **Does Greenlight work with private repositories?**
 Yes. Deployment protection rules work on both public and private repositories on all GitHub plans.
