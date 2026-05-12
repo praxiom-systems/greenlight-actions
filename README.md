@@ -179,9 +179,9 @@ Greenlight requests the minimum permissions required to function:
 | **Issues** | Read | Receive PR conversation comments for the `/greenlight` command |
 | **Pull Requests** | Read | Read PR metadata (branch, SHA, repository) to associate checks with the correct commit |
 
-Existing installations may be asked to approve the new **Issues: Read** permission before `/greenlight` comments will work.
+Existing installations must approve the new **Issues: Read** permission before `/greenlight` comments will work.
 
-The app subscribes to three webhook events:
+Greenlight uses these webhook events:
 
 - **Deployment protection rule** (`requested`) — to create the check run with a "Run CI" button when a workflow pauses at the `greenlight` environment gate
 - **Check run** (`requested_action`) — to respond when a developer clicks the "Run CI" button
@@ -199,6 +199,9 @@ Verify that the Greenlight app is installed on the repository (not just the orga
 
 **Can I trigger Greenlight from a PR comment?**
 Yes. Comment `/greenlight` or `/greenlight run` in the PR conversation. Greenlight ignores comments on regular issues and only accepts PR comments from users with write, maintain, or admin access.
+
+**Why does Greenlight need Issues: Read?**
+GitHub sends PR conversation comments through the Issue comment webhook. Greenlight uses that permission only to receive `/greenlight` comments on PRs.
 
 **Does Greenlight work on forked PRs?**
 No. Deployment protection rules are a repository-level feature and do not apply to workflows triggered from forks.
