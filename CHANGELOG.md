@@ -4,6 +4,13 @@ All notable changes to Greenlight Actions will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- PR comment trigger support: users with write, maintain, or admin repository access can comment `/greenlight` or `/greenlight run` to approve pending Greenlight checks.
+- `Issue comment` webhook support for PR conversation comments.
+
 ## [1.0.0] - 2026-04-03
 
 ### Added

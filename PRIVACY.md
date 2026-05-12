@@ -6,7 +6,7 @@ Greenlight Actions is operated by [Praxiom Systems LLC](https://praxiomsystems.c
 
 ## What Greenlight Does
 
-Greenlight Actions is a GitHub App that gates CI workflows behind manual approval on pull requests. It receives webhook events from GitHub, creates check runs, and approves deployment protection rules when a user clicks "Run CI."
+Greenlight Actions is a GitHub App that gates CI workflows behind manual approval on pull requests. It receives webhook events from GitHub, creates check runs, and approves deployment protection rules when a user clicks "Run CI" or comments `/greenlight` on a PR.
 
 ## Data We Collect
 
@@ -27,6 +27,7 @@ GitHub sends webhook payloads containing:
 - Repository name and owner
 - Pull request branch and commit SHA
 - Workflow run ID and environment name
+- PR comment body, commenter login, and repository permission level when processing `/greenlight` comments
 
 This data is used solely to create and update check runs and approve deployment protection rules. It is not logged, stored, or shared.
 
