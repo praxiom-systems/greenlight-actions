@@ -15,7 +15,7 @@ Greenlight processes the GitHub metadata needed to provide approvals and checks.
 ### Technical Details
 
 - **No app-owned storage.** There is no database or application file storage. Mode selection and routing metadata are recorded in GitHub check runs: repository/PR identifiers, commit SHA, workflow/environment names, check/run identifiers, and the selected mode. These records remain in GitHub subject to GitHub's retention and access controls.
-- **Webhook payloads** are processed in memory and discarded immediately after the request completes. Nothing is written to disk or forwarded to third parties.
+- **Webhook payloads** are processed in memory and discarded after processing. Raw payloads are not written to disk or forwarded to third parties.
 - **No source code access.** The app never reads, clones, or stores your source code.
 - **No secrets access.** The app never sees repository secrets, tokens, or environment variables.
 - **No analytics or tracking.** There are no cookies, tracking pixels, or analytics scripts.
