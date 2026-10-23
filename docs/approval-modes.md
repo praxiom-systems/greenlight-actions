@@ -24,6 +24,17 @@ environment rule later does not switch the same commit to another flow. Push a
 new commit to select a different mode. A setup failure does not lock a mode;
 after correcting setup, comment `/greenlight` to check again.
 
+Only routing records created by this GitHub App are trusted; another App's
+same-named check cannot select a mode. The record must also match the current
+commit. If the record is missing or malformed, Greenlight checks readiness again
+and writes a new record. Retain these checks: changing setup after losing a
+record can select a different flow for the same commit. Use a new commit when
+changing modes rather than removing checks.
+
+If overlapping deliveries create several valid records, the earliest check ID
+wins; Greenlight checks again before routing work. This makes ordering
+deterministic but is not an atomic lock against simultaneous selection updates.
+
 An access-denied response asks you to check installation permissions. A network,
 rate-limit, or server error asks you to retry. Greenlight does not infer your
 subscription from every API error or start fallback CI during an outage.
@@ -39,6 +50,10 @@ ask the App operator to set an explicit dispatch override.
 Use this to keep your normal PR workflow, event context, merge-commit checkout,
 job checks, and workflow links. Private/internal repositories require Enterprise
 for the custom protection rule.
+
+Native mode retains `/greenlight` approval for fork PRs when GitHub delivers the
+native gate request and the commenter has write, maintain, or admin access. The
+same-repository restriction below applies to dispatch mode.
 
 1. Install Greenlight on the repository.
 2. Open **Settings > Environments**, create/open `greenlight`, enable Greenlight
@@ -123,11 +138,24 @@ conventional names do not need to configure the App backend.
 ## Troubleshooting and limits
 
 - **Setup needed:** finish the matching setup and retry `/greenlight`.
+- **No setup or approval check appears:** ask the App operator to verify the
+  installation and the **Pull request**, **Deployment protection rule**,
+  **Check run**, **Issue comment**, and **Workflow run** subscriptions. The App
+  cannot inspect or diagnose an event GitHub never delivers. After correcting
+  subscriptions, redeliver the missed webhook or push a new commit.
 - **Could not verify setup:** check App permissions or wait for GitHub to recover.
   A 403/404 response alone is not proof of a particular subscription.
+  Failures reading or saving the routing check also stop approval. Greenlight
+  tries to publish temporary-error guidance; if the Checks API is unavailable,
+  that message may be impossible to publish. Operators can inspect Worker logs
+  and retry `/greenlight` after recovery.
 - **Configuration conflict:** the commit already selected another mode. A native
   gate request conflicting with dispatch is rejected with instructions rather
   than approved as a second flow. Correct the workflow and push a new commit.
+- **Native job waits without an approval check:** confirm it belongs to a PR.
+  Requests without a PR SHA or callback URL are ignored with a Worker warning;
+  the App cannot associate an approval with them. Use the environment example's
+  conditional gate to leave post-merge pushes ungated.
 - **Dispatch rejected:** confirm the workflow is on the default branch, active,
   and accepts `greenlight_sha`, `greenlight_pr`, and `greenlight_check_id` inputs.
   Metadata discovery cannot verify these declarations before dispatch.
@@ -141,7 +169,11 @@ conventional names do not need to configure the App backend.
   commit for a fresh approval.
 - Sequential duplicate commands are ignored. Simultaneous approvals/webhooks are
   not protected by an atomic lock; workflow concurrency bounds parallel work but
-  does not guarantee exactly-once execution.
+  does not guarantee exactly-once execution. Before dispatch, Greenlight checks
+  its approval is still neutral and its associated result is still queued, then
+  marks the result in progress. This blocks sequential retries; two requests
+  can still both read the queued state before either updates it. An atomic
+  idempotency mechanism is required to prevent that race.
 - GitHub Free private repositories can run CI, but required-check enforcement
   through protected branches is a separate plan-dependent feature.
 
