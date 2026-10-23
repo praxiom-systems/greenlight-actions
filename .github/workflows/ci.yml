@@ -36,6 +36,9 @@ jobs:
               sys.exit(1)
           "
 
+      - name: Validate workflow example contracts
+        run: python3 scripts/validate-examples.py
+
       - name: Check links
         uses: lycheeverse/lychee-action@v2
         with:
