@@ -15,7 +15,7 @@ jobs:
       - name: Lint Markdown
         uses: DavidAnson/markdownlint-cli2-action@v19
         with:
-          globs: "**/*.md #docs/superpowers/**"
+          globs: "*.md docs/**/*.md #docs/superpowers/**"
 
       - name: Validate YAML
         run: |
@@ -23,7 +23,7 @@ jobs:
           python3 -c "
           import yaml, sys, glob
           errors = []
-          for f in glob.glob('.github/ISSUE_TEMPLATE/*.yml'):
+          for f in glob.glob('.github/ISSUE_TEMPLATE/*.yml') + glob.glob('examples/*.yml'):
               try:
                   yaml.safe_load(open(f))
                   print(f'{f}: valid')
@@ -35,6 +35,9 @@ jobs:
                   print(e, file=sys.stderr)
               sys.exit(1)
           "
+
+      - name: Validate workflow example contracts
+        run: python3 scripts/validate-examples.py
 
       - name: Check links
         uses: lycheeverse/lychee-action@v2

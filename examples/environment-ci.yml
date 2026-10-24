@@ -1,0 +1,20 @@
+name: CI with native approval
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Enable the App's protection rule on this environment first.
+    # Private/internal repositories require GitHub Enterprise for that rule.
+    environment: ${{ github.event_name == 'pull_request' && 'greenlight' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: echo "Replace this step with your test commands"

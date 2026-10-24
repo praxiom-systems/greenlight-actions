@@ -1,5 +1,7 @@
 # Security Policy
 
+Greenlight supports native environment approvals and workflow dispatch approvals. Report unauthorized approvals or dispatches, incorrect commit/result association, and unexpected changes of approval mode. The App does not read source files or repository secrets. Small routing and mode records are stored in GitHub check runs; there is no app-owned database or file storage. See the [mode guide](docs/approval-modes.md) for current dispatch limitations, including simultaneous duplicate approvals and same-SHA reruns.
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in Greenlight Actions, please report it responsibly.
@@ -28,4 +30,4 @@ If you discover a security vulnerability in Greenlight Actions, please report it
 
 ## Architecture
 
-Greenlight Actions is fully stateless. It has no database, no file storage, and no persistent state. Webhook payloads are processed in memory and discarded. The app never reads, clones, or stores source code, and never accesses repository secrets or environment variables.
+Greenlight Actions has no app-owned database or file storage. Raw webhook payloads are processed in memory and discarded. GitHub check runs retain the small routing, selected-mode, and result records used across requests. The App never reads, clones, or stores source code, and never accesses repository secrets or environment variables.
