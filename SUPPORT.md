@@ -9,7 +9,7 @@
 ## Before Filing an Issue
 
 1. Check the [FAQ](README.md#faq) for common questions
-2. Read the PR's **Greenlight Actions: Setup** check and the [mode guide](docs/approval-modes.md). After correcting setup, retry `/greenlight`. Include the selected mode and check message in a bug report; do not include App keys or repository secrets.
+2. Read any setup guidance on the PR's **Greenlight Actions: CI** check and the [mode guide](docs/approval-modes.md). After correcting setup, retry `/greenlight`. Include the selected mode and check message in a bug report; do not include App keys or repository secrets.
 3. Search [existing issues](https://github.com/praxiom-systems/greenlight-actions/issues) to avoid duplicates
 
 ## Response Times

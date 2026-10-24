@@ -10,7 +10,7 @@ Run expensive CI when you're ready. Keep pushing without starting every job on e
 
 Greenlight adds a **Run CI** button to your PR. Click it or comment `/greenlight` to approve work on the current commit. Keep quick checks automatic and hold expensive builds or tests until you want them to run. Waiting does not consume runner minutes.
 
-**Release status:** the dual-mode instructions in this branch require the matching backend update and App webhook subscriptions. The existing hosted environment gate continues to work; dispatch and automatic selection must be deployed before hosted users can use the new setup.
+**Release coordination:** these instructions require the matching backend and App webhook subscriptions. Publish the quiet-setup guidance after its follow-up backend update is deployed.
 
 ## Two Approval Modes
 
@@ -29,9 +29,9 @@ Greenlight defaults to `auto`:
 
 1. Prefer the `greenlight` environment if this App's custom protection rule is enabled.
 2. Otherwise, discover an active `.github/workflows/greenlight-ci.yml` dispatch workflow.
-3. If neither is ready, show **Greenlight Actions: Setup** with instructions.
+3. If neither is ready, show instructions on **Greenlight Actions: CI** explaining what to fix and how to retry.
 
-Selection is kept for the current commit. GitHub errors do not silently start a different flow. Permission problems and temporary outages get different guidance; a missing environment is not treated as proof of a subscription plan.
+Healthy setup adds no separate check. Selection is retained in the existing approval/result checks once they are created. GitHub errors do not silently start a different flow. Permission problems and temporary outages get different guidance; a missing environment is not treated as proof of a subscription plan.
 
 Your YAML must support the chosen mode. The App checks GitHub metadata, never reads source files, and cannot rewrite an environment-only workflow into a dispatch workflow. See the [mode guide](docs/approval-modes.md) for explicit overrides, conflicts, and setup recovery.
 
@@ -94,7 +94,7 @@ The hosted App has no database or app-owned file storage. It reads GitHub metada
 
 | Permission | Access | Purpose |
 | --- | --- | --- |
-| Checks | Read & Write | Create approval, setup, and result checks; record mode selection in GitHub |
+| Checks | Read & Write | Create approval/result checks and actionable setup guidance |
 | Actions | Read & Write | Inspect rules and workflow metadata, dispatch workflows, read results, approve protection rules |
 | Deployments | Read & Write | Handle native deployment protection rules |
 | Issues | Read | Receive PR conversation comments for `/greenlight` |
@@ -112,11 +112,11 @@ Only the environment gate requires Enterprise for private/internal repos. Dispat
 **Can it switch my existing workflow automatically?**
 It selects between configured modes and explains missing setup. It cannot change your YAML. An environment-only workflow needs adaptation before dispatch can replace it.
 
-**Why does the setup check say it cannot verify access?**
+**Why does Greenlight say it cannot verify setup?**
 Check the App installation and permission updates. Access errors, missing setup, and outages are different conditions; the message describes what could be verified. Fix setup and retry `/greenlight`.
 
 **Does it work with forks?**
-Greenlight currently supports PRs from branches in the same repository. Fork PRs are not supported.
+Dispatch supports PRs from branches in the same repository. Native environment mode retains fork-PR approvals when GitHub delivers the gate request and an authorized maintainer approves it.
 
 **Can I gate several jobs?**
 Environment mode gates jobs referencing the environment. Dispatch approves one configured workflow per repository, and that workflow can contain multiple jobs.

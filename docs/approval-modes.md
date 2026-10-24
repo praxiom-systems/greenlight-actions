@@ -16,24 +16,33 @@ The default is `auto`. When a PR opens or receives a commit, Greenlight:
    environment. If it is, Greenlight chooses environment mode.
 2. Otherwise, looks for an active `.github/workflows/greenlight-ci.yml` workflow
    on the default branch. If it exists, Greenlight chooses dispatch mode.
-3. If neither is ready, publishes **Greenlight Actions: Setup** with instructions
-   for completing setup. No fallback workflow is started.
+3. If neither is ready, shows actionable setup instructions on
+   **Greenlight Actions: CI**. No fallback workflow is started.
 
-The setup check records the selected mode for that commit. Adding/removing an
-environment rule later does not switch the same commit to another flow. Push a
-new commit to select a different mode. A setup failure does not lock a mode;
-after correcting setup, comment `/greenlight` to check again.
+A healthy setup adds no separate status or mode-selection check. Native mode
+uses its existing approval check; dispatch uses its approval and result checks.
+Those checks also retain the selected mode for their commit. Native selection
+is recorded when GitHub requests approval for a paused PR job; discovery before
+that callback stays quiet. Once an approval/result check exists, adding or
+removing an environment rule does not switch that commit to another flow. Push
+a new commit to choose a different mode.
 
-Only routing records created by this GitHub App are trusted; another App's
-same-named check cannot select a mode. The record must also match the current
-commit. If the record is missing or malformed, Greenlight checks readiness again
-and writes a new record. Retain these checks: changing setup after losing a
-record can select a different flow for the same commit. Use a new commit when
-changing modes rather than removing checks.
+If setup needs attention, the Greenlight check explains the problem, how to fix
+it, and how to retry. After correcting setup, comment `/greenlight` to check
+again. Dispatch converts that same warning into its approval check. Native mode
+reuses it when GitHub delivers the paused job's protection-rule request. A setup
+warning does not select a mode or mean that CI has passed.
+
+Only checks created by this GitHub App are trusted; another App's same-named
+check cannot select a mode. The metadata must also match the current commit.
+If metadata is missing or malformed, Greenlight checks readiness again. Retain
+the approval/result checks and use a new commit when changing modes.
 
 If overlapping deliveries create several valid records, the earliest check ID
-wins; Greenlight checks again before routing work. This makes ordering
-deterministic but is not an atomic lock against simultaneous selection updates.
+wins; Greenlight checks again before routing work. This is deterministic but is
+not an atomic lock against simultaneous approvals. Older **Greenlight Actions:
+Setup** records remain readable for compatibility; new healthy commits do not
+create them. Existing checks remain in the history of older commits.
 
 An access-denied response asks you to check installation permissions. A network,
 rate-limit, or server error asks you to retry. Greenlight does not infer your
@@ -101,12 +110,11 @@ to create CI runs only after approval.
 
 You will see:
 
-- **Setup:** the selected mode and setup guidance; this does not mean tests passed.
 - **Run CI:** the approval button, neutral before approval and successful after
   approval is accepted.
 - **Dispatch CI:** queued before approval, in progress while running, then the
   actual workflow result. Where your plan supports required checks, require this
-  result check rather than the approval/setup checks.
+  result check rather than the approval check.
 
 The workflow definition comes from the default branch and checks out the exact
 approved PR head SHA. It does not use the normal `pull_request` event payload or
@@ -145,7 +153,7 @@ conventional names do not need to configure the App backend.
   subscriptions, redeliver the missed webhook or push a new commit.
 - **Could not verify setup:** check App permissions or wait for GitHub to recover.
   A 403/404 response alone is not proof of a particular subscription.
-  Failures reading or saving the routing check also stop approval. Greenlight
+  Failures reading approval metadata also stop approval. Greenlight
   tries to publish temporary-error guidance; if the Checks API is unavailable,
   that message may be impossible to publish. Operators can inspect Worker logs
   and retry `/greenlight` after recovery.
