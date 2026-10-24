@@ -164,6 +164,10 @@ conventional names do not need to configure the App backend.
   Requests without a PR SHA or callback URL are ignored with a Worker warning;
   the App cannot associate an approval with them. Use the environment example's
   conditional gate to leave post-merge pushes ungated.
+  If a GitHub API error prevents the native approval lookup or check creation,
+  operators should inspect Worker logs and redeliver the protection-rule event
+  after recovery. Webhooks are acknowledged before background work finishes;
+  a later handler error does not ask GitHub to retry automatically.
 - **Dispatch rejected:** confirm the workflow is on the default branch, active,
   and accepts `greenlight_sha`, `greenlight_pr`, and `greenlight_check_id` inputs.
   Metadata discovery cannot verify these declarations before dispatch.
