@@ -2,6 +2,12 @@
 
 [marketplace-listing.md](marketplace-listing.md) contains only the public long description. Copy the entire file into the Marketplace description editor. Its links are absolute so they work outside this repository. Updating this file does not publish changes to Marketplace.
 
+Keep the description between **400 and 2,000 characters**, including Markdown and link URLs. Check its length after editing:
+
+```sh
+wc -m < docs/marketplace-listing.md
+```
+
 ## Copy the description
 
 From the repository root, use one of these commands.
