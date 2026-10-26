@@ -1,0 +1,1 @@
+Run expensive CI when you're ready. Keep quick checks automatic and approve heavier jobs from your PR with Run CI or /greenlight. Waiting uses no runner minutes. Free for personal projects and teams, with dispatch support for private repositories on GitHub Free.

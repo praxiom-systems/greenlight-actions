@@ -1,18 +1,29 @@
 # Publishing the Marketplace listing
 
-[marketplace-listing.md](marketplace-listing.md) contains only the public long description. Copy the entire file into the Marketplace description editor. Its links are absolute so they work outside this repository. Updating this file does not publish changes to Marketplace.
+The listing has two description fields. Each file contains only the copy for its field; paste the entire file without these publishing instructions.
 
-Keep the description between **400 and 2,000 characters**, including Markdown and link URLs. Check its length after editing:
+| Marketplace field | File | Maximum characters |
+| --- | --- | --- |
+| Introductory description, shown at the top | [marketplace-introduction.md](marketplace-introduction.md) | 500 |
+| Detailed description, shown below the introduction | [marketplace-listing.md](marketplace-listing.md) | 2,000 |
+
+Count Markdown, whitespace, and link URLs toward the limits. The detailed description uses absolute links so they work outside this repository. Repository edits do not publish changes to Marketplace.
+
+Check both lengths after editing:
 
 ```sh
-wc -m < docs/marketplace-listing.md
+wc -m docs/marketplace-introduction.md docs/marketplace-listing.md
 ```
 
-## Copy the description
+## Copy each description
 
-From the repository root, use one of these commands.
+From the repository root, copy and paste the introduction first, then copy and paste the detailed description. Run each command separately so the second does not overwrite the clipboard before you paste the first.
 
 Linux with X11:
+
+```sh
+xclip -selection clipboard < docs/marketplace-introduction.md
+```
 
 ```sh
 xclip -selection clipboard < docs/marketplace-listing.md
@@ -21,21 +32,21 @@ xclip -selection clipboard < docs/marketplace-listing.md
 macOS:
 
 ```sh
+pbcopy < docs/marketplace-introduction.md
+```
+
+```sh
 pbcopy < docs/marketplace-listing.md
 ```
 
 Linux with Wayland and wl-clipboard installed:
 
 ```sh
-wl-copy < docs/marketplace-listing.md
+wl-copy < docs/marketplace-introduction.md
 ```
 
-## Short description
-
-Paste this into the short description field:
-
-```text
-Run expensive CI when you're ready. Approve from your PR and keep quick checks automatic.
+```sh
+wl-copy < docs/marketplace-listing.md
 ```
 
 ## Free plan
