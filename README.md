@@ -4,234 +4,132 @@
 
 <h1 align="center">Greenlight Actions</h1>
 
-Gate CI behind manual approval. Zero wasted minutes.
+Run expensive CI when you're ready. Keep pushing without starting every job on every commit.
 
-[![Install](https://img.shields.io/badge/Install-GitHub_Marketplace-blue)](https://github.com/apps/greenlight-actions)
+[Install Greenlight](https://github.com/apps/greenlight-actions) · [Approval modes and setup](docs/approval-modes.md) · [Support](SUPPORT.md)
 
-Every push triggers your CI. Greenlight pauses the expensive part until you click "Run CI" or comment `/greenlight` — so WIP commits, typo fixes, and mid-rebase pushes cost you nothing.
+Greenlight adds a **Run CI** button to your PR. Click it or comment `/greenlight` to approve work on the current commit. Keep quick checks automatic and hold expensive builds or tests until you want them to run. Waiting does not consume runner minutes.
 
-**Free.** One-click install, one line of YAML, setup in under two minutes.
+**Release coordination:** these instructions require the matching backend and App webhook subscriptions. Publish the quiet-setup guidance after its follow-up backend update is deployed.
 
-<p align="center">
-  <img src="assets/banners/greenlight-banner-steps.png" alt="Greenlight Actions overview — push triggers gate, one-click approval, slash CI credit usage, stateless and secure">
-</p>
+## Two Approval Modes
 
----
+| Mode | How It Works | Repository Support |
+| --- | --- | --- |
+| **Environment** | Your PR workflow starts, and GitHub pauses gated jobs until approval | Public repos on all plans; private/internal repos on Enterprise |
+| **Dispatch** | Greenlight creates the workflow run only after approval | Public and private repos on all plans, including GitHub Free |
 
-## How It Works
+Dispatch has been tested live in a **private repository on GitHub Free**, using both the browser button and PR comment, with passing and failing results. It uses ordinary workflow dispatch APIs rather than deployment protection rules.
 
-1. **You push code to a PR.** Your workflow triggers normally, but the CI job pauses at the Greenlight gate. The merge box shows checks are waiting.
+**The App is free.** Standard GitHub-hosted runners are already free for public repositories. Greenlight still reduces unnecessary work, check noise, and runner usage; monetary savings depend on paid larger runners, your own infrastructure, or external services used by your jobs. Normal GitHub Actions quotas and billing still apply when CI runs. See [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
 
-   <p align="center">
-     <picture>
-       <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-pending-dark.png">
-       <img src="assets/screenshots/product/checks-pending-light.png" alt="PR checks waiting for approval" width="90%">
-     </picture>
-   </p>
+## Automatic Selection and Setup Guidance
 
-2. **You trigger CI when ready.** Open the Checks tab to click "Run CI", or comment `/greenlight` on the PR. Greenlight approves the gate and your CI job starts.
+Greenlight defaults to `auto`:
 
-   <p align="center">
-     <picture>
-       <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-waiting-dark.png">
-       <img src="assets/screenshots/product/checks-waiting-light.png" alt="Greenlight Actions check with Run CI button" width="90%">
-     </picture>
-   </p>
+1. Prefer the `greenlight` environment if this App's custom protection rule is enabled.
+2. Otherwise, discover an active `.github/workflows/greenlight-ci.yml` dispatch workflow.
+3. If neither is ready, show instructions on **Greenlight Actions: CI** explaining what to fix and how to retry.
 
-3. **CI runs.** Your workflow continues and checks start executing.
+Healthy setup adds no separate check. Selection is retained in the existing approval/result checks once they are created. GitHub errors do not silently start a different flow. Permission problems and temporary outages get different guidance; a missing environment is not treated as proof of a subscription plan.
 
-   <p align="center">
-     <picture>
-       <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-running-dark.png">
-       <img src="assets/screenshots/product/checks-running-light.png" alt="CI running after approval" width="90%">
-     </picture>
-   </p>
-
-4. **Checks go green.** All checks pass and you're ready to merge.
-
-   <p align="center">
-     <picture>
-       <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/checks-passed-dark.png">
-       <img src="assets/screenshots/product/checks-passed-light.png" alt="All checks passed" width="90%">
-     </picture>
-   </p>
-
-5. **You push again, the gate resets.** Every new commit re-triggers the workflow and pauses it again, so stale green checks never linger on changed code.
-
-Your workflow file stays the same. Greenlight only controls _when_ the work runs.
-
-> **How is this different from polling-based solutions?** Greenlight uses GitHub's [deployment protection rules](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-deployments/creating-custom-deployment-protection-rules). The workflow truly pauses — zero Actions minutes are consumed while waiting for approval.
-
----
+Your YAML must support the chosen mode. The App checks GitHub metadata, never reads source files, and cannot rewrite an environment-only workflow into a dispatch workflow. See the [mode guide](docs/approval-modes.md) for explicit overrides, conflicts, and setup recovery.
 
 ## Get Started
 
-### 1. Install Greenlight
+### Environment Mode
 
-[Install Greenlight](https://github.com/apps/greenlight-actions) on your GitHub organization or repositories. Setup takes under a minute. The `greenlight` environment is created automatically — here's what it looks like:
+Use this for public repos on any plan, or private/internal repos on Enterprise.
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/product/settings-environment-dark.png">
-    <img src="assets/screenshots/product/settings-environment-light.png" alt="Greenlight environment configuration" width="90%">
-  </picture>
-</p>
-
-### 2. Add the Greenlight Environment to Your Job
-
-Add `environment: greenlight` to any job you want Greenlight to gate. Keep your existing triggers — Greenlight works alongside them.
+1. [Install Greenlight](https://github.com/apps/greenlight-actions) on the repository.
+2. In **Settings > Environments**, create/open `greenlight`, enable Greenlight Actions under **Deployment protection rules**, and save. Creating an environment alone does not enable a protection rule.
+3. Add the environment to the jobs you want to gate:
 
 ```yaml
-# .github/workflows/ci.yml
-name: CI
-
 on:
   pull_request:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     environment: greenlight
     steps:
       - uses: actions/checkout@v4
-      # ... your existing steps unchanged
+      # Your existing test steps stay here.
 ```
 
-### 3. Open a Pull Request
+Open a PR, then click **Run CI** or comment `/greenlight`. Each new push creates a new gate. Normal PR event data, checkout behavior, job checks, and workflow links remain available.
 
-Push a branch and open a PR. Your workflow will start, pause at the `greenlight` environment gate, and you will see a "Greenlight Actions: CI" check with a "Run CI" button. Click it or comment `/greenlight` when your code is ready.
+See the [complete environment example](examples/environment-ci.yml), including leaving post-merge pushes ungated. Installing a free App does not bypass GitHub's Enterprise requirement for private/internal custom protection rules. [GitHub's requirements](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/configure-custom-protection-rules)
 
-That is it. No config files, no dashboard, no CLI. Setup takes under two minutes.
+### Dispatch Mode
 
-### Workflows That Also Run on Push
+Use this for private repos on Free, Pro, or Team, or to create runs only after approval.
 
-If your workflow also runs on `push` (e.g., to run CI after merging to `main`), conditionally apply the environment so the gate only fires on PRs:
+1. Install Greenlight on the repository.
+2. Copy the [dispatch example](examples/dispatch-ci.yml) to `.github/workflows/greenlight-ci.yml` on the **default branch**.
+3. Replace the demo test step with your real tests. Keep the three Greenlight inputs, exact run name, input validation, and approved-SHA checkout.
+4. Leave the expensive workflow triggered only by `workflow_dispatch`, with no `environment: greenlight`. Keep fast automatic checks in another workflow.
+5. Open a same-repository PR and click **Run CI** or comment `/greenlight`.
 
-```yaml
-# .github/workflows/ci.yml
-name: CI
+Greenlight shows a separate approval check and CI result check. **Run CI** means approval was accepted; **Dispatch CI** reports whether tests actually passed. A new commit needs fresh approval. After correcting setup, `/greenlight` can recheck an existing PR without another push.
 
-on:
-  pull_request:
-  push:
-    branches: [main]
+The workflow definition runs from the default branch and checks out the exact approved PR head. Workflows depending on `github.event.pull_request`, synthetic merge commits, or PR changes to the workflow definition need adaptation. Read the [dispatch setup and limitations](docs/approval-modes.md#dispatch-mode) before migrating.
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'pull_request' && 'greenlight' || '' }}
-    steps:
-      - uses: actions/checkout@v4
-      # ... your existing steps unchanged
-```
+## Why Use Greenlight?
 
-On a pull request, the job uses the `greenlight` environment and pauses at the gate. On a push to `main`, the expression evaluates to an empty string (no environment), so the job runs immediately with no gate.
+- Push intermediate commits without repeatedly starting expensive jobs.
+- Keep linting and quick tests automatic while approving heavy work from the PR.
+- Use a button or `/greenlight` rather than maintaining approval scripts.
+- Use native environment gates where supported and dispatch on Free private repos.
+- Get setup guidance when the expected gate or dispatch workflow is missing.
 
-> **Why not use environment branch restrictions instead?** GitHub's environment branch restrictions (Settings > Environments > Deployment branches) will _fail_ the job on disallowed branches rather than skip the gate. The conditional environment approach above is more reliable and does not require a paid GitHub plan for private repositories.
+GitHub already offers manual workflows and native environment approvals. Greenlight packages PR buttons, comment commands, mode selection, and setup guidance around those features. Both modes wait without using a runner.
 
----
+## Security and Permissions
 
-## Why Greenlight
-
-| What Changes | Before Greenlight | After Greenlight |
-|---|---|---|
-| CI minutes on WIP pushes | Every push burns compute | Workflows pause until you click "Run CI" or comment `/greenlight` — zero minutes burned |
-| Red checks on incomplete code | Failures train your team to ignore CI | Checks stay neutral until you explicitly trigger |
-| Stale green checks | Outdated commits show false confidence | Every push resets the gate automatically |
-| Setup complexity | Custom scripts, branch rules, or Enterprise plans | One line of YAML, free on all GitHub plans |
-
-### Alternatives Compared
-
-| Alternative | Limitation Greenlight Solves |
-|------------|---------------------------|
-| GitHub Environment Required Reviewers | Requires Enterprise ($21/user/mo) for private repos |
-| Polling-based approval Actions | Burns Actions minutes while waiting for approval |
-| Removing `pull_request` trigger entirely | Terrible DX — requires navigating to Actions tab, entering branch name |
-| `concurrency` + `cancel-in-progress` | Doesn't prevent the initial trigger, just cancels overlapping runs |
-
-### Who This Is NOT For
-
-- **Teams that want every push tested automatically.** Greenlight adds a manual step — if your workflow is "push and forget," this adds friction you don't want.
-- **Workflows outside GitHub Actions.** Greenlight is GitHub-native and only works with GitHub Actions.
-- **Fork-based contribution workflows.** Deployment protection rules don't apply to workflows triggered from forks.
-
----
-
-## Security and Privacy
-
-Greenlight is designed to touch as little as possible.
-
-- **Stateless.** No database, no file storage, no persistent state of any kind. Every request is processed and forgotten.
-- **No code access.** Greenlight never reads, clones, or stores your source code. It only interacts with the GitHub APIs needed to create checks, approve deployments, read PR metadata, and process `/greenlight` comments.
-- **No secrets exposure.** It never sees or handles your repository secrets, tokens, or environment variables.
-- **No logging of content.** Webhook payloads are processed in memory and discarded. Nothing is written to disk or sent to third parties.
-- **Minimal permissions.** Only the permissions strictly required to create check runs and approve deployment protection rules.
+The hosted App has no database or app-owned file storage. It reads GitHub metadata and stores check status plus small routing records in GitHub check runs: commit SHA, workflow/environment names, identifiers, and the selected mode. It does not read, clone, or store source files or repository secrets. It does not log comment bodies or webhook payloads.
 
 ### Permissions Explained
 
-Greenlight requests the minimum permissions required to function:
+| Permission | Access | Purpose |
+| --- | --- | --- |
+| Checks | Read & Write | Create approval/result checks and actionable setup guidance |
+| Actions | Read & Write | Inspect rules and workflow metadata, dispatch workflows, read results, approve protection rules |
+| Deployments | Read & Write | Handle native deployment protection rules |
+| Issues | Read | Receive PR conversation comments for `/greenlight` |
+| Pull Requests | Read | Read current PR metadata and associate approval with a commit |
 
-| Permission | Access | Why |
-|------------|--------|-----|
-| **Checks** | Read & Write | Create the "Greenlight Actions: CI" check run on PRs, update its status when CI starts |
-| **Actions** | Read & Write | Approve deployment protection rules to allow gated CI jobs to proceed |
-| **Deployments** | Read & Write | Respond to deployment protection rule requests from GitHub |
-| **Issues** | Read | Receive PR conversation comments for the `/greenlight` command |
-| **Pull Requests** | Read | Read PR metadata (branch, SHA, repository) to associate checks with the correct commit |
+The App uses **Pull request**, **Deployment protection rule**, **Check run**, **Issue comment**, and **Workflow run** webhook events. Existing registrations need the Pull request and Workflow run subscriptions added for automatic/dispatch mode. Approve any pending permission updates on the installation. The development App also needs Deployments permission and the protection-rule event to test environment mode.
 
-Existing installations must approve the new **Issues: Read** permission before `/greenlight` comments will work.
-
-Greenlight uses these webhook events:
-
-- **Deployment protection rule** (`requested`) — to create the check run with a "Run CI" button when a workflow pauses at the `greenlight` environment gate
-- **Check run** (`requested_action`) — to respond when a developer clicks the "Run CI" button
-- **Issue comment** (`created`) — to respond when a commenter with write, maintain, or admin access adds `/greenlight` or `/greenlight run` to a PR conversation
-
----
+Buttons and comment commands require write, maintain, or admin repository permission. `/greenlight run` also works. Regular issue comments and non-matching commands are ignored. See [privacy](PRIVACY.md) and [security](SECURITY.md).
 
 ## FAQ
 
-**No check is appearing on my PR.**
-Make sure the job in your workflow has `environment: greenlight` set. The Greenlight gate only activates when the workflow reaches that environment.
+**Does Greenlight require Enterprise?**
+Only the environment gate requires Enterprise for private/internal repos. Dispatch works in Free private repos. Public repositories support both modes on all plans.
 
-**The check appeared but nothing happens when I click "Run CI".**
-Verify that the Greenlight app is installed on the repository (not just the organization). Check Settings > Integrations > GitHub Apps.
+**Can it switch my existing workflow automatically?**
+It selects between configured modes and explains missing setup. It cannot change your YAML. An environment-only workflow needs adaptation before dispatch can replace it.
 
-**Can I trigger Greenlight from a PR comment?**
-Yes. Comment `/greenlight` or `/greenlight run` in the PR conversation. Greenlight ignores comments on regular issues and only accepts PR comments from users with write, maintain, or admin access.
+**Why does Greenlight say it cannot verify setup?**
+Check the App installation and permission updates. Access errors, missing setup, and outages are different conditions; the message describes what could be verified. Fix setup and retry `/greenlight`.
 
-**Why does Greenlight need Issues: Read?**
-GitHub sends PR conversation comments through the Issue comment webhook. Greenlight uses that permission only to receive `/greenlight` comments on PRs.
+**Does it work with forks?**
+Dispatch supports PRs from branches in the same repository. Native environment mode retains fork-PR approvals when GitHub delivers the gate request and an authorized maintainer approves it.
 
-**Does Greenlight work on forked PRs?**
-No. Deployment protection rules are a repository-level feature and do not apply to workflows triggered from forks.
+**Can I gate several jobs?**
+Environment mode gates jobs referencing the environment. Dispatch approves one configured workflow per repository, and that workflow can contain multiple jobs.
 
-**Can I gate multiple jobs in the same workflow?**
-Yes. Add `environment: greenlight` to each job you want to gate. Each job gets its own independent "Run CI" button, and a single `/greenlight` PR comment approves all pending Greenlight checks for the current PR commit.
+**What if nobody approves?**
+Dispatch creates no workflow run. Environment jobs wait without runner usage until approved, cancelled, or timed out; GitHub allows up to 30 days for environment approval, subject to overall workflow limits. [GitHub Actions limits](https://docs.github.com/en/actions/reference/limits)
 
-**Does Greenlight work with private repositories?**
-Yes. Deployment protection rules work on both public and private repositories on all GitHub plans.
+**Are there dispatch limitations?**
+Same-SHA reruns, fork PRs, and merge queues are not supported by this implementation. Sequential duplicate commands are ignored, but simultaneous approvals are not protected by an atomic lock. See the [full limitations](docs/approval-modes.md#troubleshooting-and-limits).
 
-**What happens if nobody clicks "Run CI"?**
-The workflow run stays in a "waiting" state. GitHub's deployment protection rules have a 30-day timeout, but in practice the workflow run will be cancelled by GitHub's own run timeout first (default: 6 hours, configurable via `timeout-minutes`). No Actions minutes are consumed while waiting.
+**How do I remove it?**
+Remove the environment gate or restore the triggers you want on a dispatch workflow, then uninstall the App. Existing check runs remain subject to GitHub retention.
 
-**How do I remove Greenlight?**
-Remove `environment: greenlight` from your workflow files, then uninstall the app from Settings > Integrations > GitHub Apps. No data cleanup is needed — Greenlight stores nothing.
+## Support and License
 
----
-
-## Support
-
-See [SUPPORT.md](SUPPORT.md) for how to get help, report bugs, or request features.
-
----
-
-## Built by Praxiom Systems
-
-Greenlight is built and maintained by [Praxiom Systems LLC](https://praxiomsystems.com/). It is open-source ([MIT](LICENSE)), stateless, and never touches your code or secrets. Read our [privacy policy](PRIVACY.md) and [security policy](SECURITY.md).
-
----
-
-## License
-
-[MIT](LICENSE) — Copyright (c) 2026 [Praxiom Systems LLC](https://praxiomsystems.com/)
+Built and maintained by [Praxiom Systems LLC](https://praxiomsystems.com/). See [support](SUPPORT.md), [privacy](PRIVACY.md), [security](SECURITY.md), and the [MIT license](LICENSE).

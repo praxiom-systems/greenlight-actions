@@ -1,0 +1,59 @@
+name: Greenlight dispatch CI
+# Greenlight uses this exact title to correlate the final workflow result.
+run-name: Greenlight ${{ inputs.greenlight_check_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      greenlight_sha:
+        description: Exact PR commit approved for testing
+        required: true
+        type: string
+      greenlight_pr:
+        description: Pull request number
+        required: true
+        type: string
+      greenlight_check_id:
+        description: Greenlight check run ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Bounds concurrent duplicate approvals. This is not an exactly-once lock:
+# GitHub can still queue a second run with the same group.
+concurrency:
+  group: greenlight-${{ inputs.greenlight_check_id }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate dispatch inputs
+        env:
+          APPROVED_SHA: ${{ inputs.greenlight_sha }}
+          PR_NUMBER: ${{ inputs.greenlight_pr }}
+          CHECK_ID: ${{ inputs.greenlight_check_id }}
+        shell: bash
+        run: |
+          [[ "$APPROVED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$CHECK_ID" =~ ^[1-9][0-9]*$ ]]
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.greenlight_sha }}
+          persist-credentials: false
+
+      - name: Verify the approved commit was checked out
+        env:
+          APPROVED_SHA: ${{ inputs.greenlight_sha }}
+        run: test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
+
+      - name: Run tests
+        # Demo assertion: commit this file to deliberately exercise failure.
+        # Replace with the real test command after the prototype is verified.
+        run: test ! -f fail-ci
