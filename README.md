@@ -133,3 +133,5 @@ Remove the environment gate or restore the triggers you want on a dispatch workf
 ## Support and License
 
 Built and maintained by [Praxiom Systems LLC](https://praxiomsystems.com/). See [support](SUPPORT.md), [privacy](PRIVACY.md), [security](SECURITY.md), and the [MIT license](LICENSE).
+
+Maintainers: [Marketplace listing copy and publishing instructions](docs/marketplace-publishing.md).
