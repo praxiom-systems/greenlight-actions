@@ -1,0 +1,13 @@
+{
+	"workflows": {
+		".github/workflows/pr-checks.yml": {
+			"mode": "environment",
+			"jobs": {
+				"integration": "ci-approval"
+			}
+		},
+		".github/workflows/greenlight-ci.yml": {
+			"mode": "dispatch"
+		}
+	}
+}

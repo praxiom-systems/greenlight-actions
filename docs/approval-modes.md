@@ -3,6 +3,11 @@
 Greenlight supports two ways to approve expensive CI work. Both wait without
 using a runner. Your workflow must be prepared for the selected mode.
 
+For workflow typos, custom environment names, and dispatch configuration checks,
+see the optional [repository-side workflow validator](workflow-validation.md).
+GitHub can create a misspelled environment without protection rules; the App
+does not read YAML and cannot detect that job reference from readiness metadata.
+
 | Mode | Public repositories | Private/internal repositories | What happens |
 | --- | --- | --- | --- |
 | Environment | All GitHub plans | GitHub Enterprise | GitHub pauses an existing PR job; Greenlight approves it |
