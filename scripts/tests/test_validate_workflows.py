@@ -121,6 +121,15 @@ class WorkflowValidationTest(unittest.TestCase):
     def test_dispatch_template_passes(self):
         self.assertEqual(self.errors(self.dispatch, dispatch=True), [])
 
+    def test_equivalent_dispatch_expression_whitespace(self):
+        self.dispatch["run-name"] = "Greenlight ${{inputs.greenlight_check_id}}"
+        self.dispatch["jobs"]["test"]["steps"][1]["with"]["ref"] = "${{inputs.greenlight_sha}}"
+        self.assertEqual(self.errors(self.dispatch, dispatch=True), [])
+
+    def test_alternative_checkout_is_not_mistaken_for_validated_approved_checkout(self):
+        self.dispatch["jobs"]["test"]["steps"][1]["uses"] = "someone/checkout@main"
+        self.assertIn("GL_DISPATCH_CHECKOUT", " ".join(self.errors(self.dispatch, dispatch=True)))
+
     def test_dispatch_contract_errors(self):
         mutations = [
             (lambda w: w["on"].update({"push": None}), "GL_DISPATCH_TRIGGER"),

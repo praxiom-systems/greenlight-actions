@@ -31,6 +31,8 @@ PR_ENVIRONMENT = re.compile(
     r"^\$\{\{\s*github\.event_name\s*==\s*'pull_request'\s*&&\s*'([^']+)'\s*\|\|\s*''\s*\}\}$"
 )
 INPUTS = ("greenlight_sha", "greenlight_pr", "greenlight_check_id")
+RUN_NAME = re.compile(r"Greenlight \$\{\{\s*inputs\.greenlight_check_id\s*\}\}")
+APPROVED_REF = re.compile(r"\$\{\{\s*inputs\.greenlight_sha\s*\}\}")
 
 
 def environment_name(value):
@@ -116,7 +118,8 @@ def check_workflows(root, config):
         for name, entry in inputs.items():
             if name not in INPUTS and isinstance(entry, dict) and str(entry.get("required")).lower() == "true":
                 errors.append(f"GL_DISPATCH_INPUT: {filename}: Extra required input {name!r} is not supplied by Greenlight. Make it optional or remove it.")
-        if workflow.get("run-name") != "Greenlight ${{ inputs.greenlight_check_id }}":
+        run_name = workflow.get("run-name")
+        if not isinstance(run_name, str) or not RUN_NAME.fullmatch(run_name):
             errors.append(f"GL_DISPATCH_NAME: {filename}: Restore run-name: Greenlight ${{{{ inputs.greenlight_check_id }}}} so results can be associated with approval.")
         checkouts = 0
         for job_id, job in jobs.items():
@@ -136,7 +139,8 @@ def check_workflows(root, config):
                 options = step.get("with", {})
                 if not isinstance(options, dict):
                     options = {}
-                if options.get("ref") != "${{ inputs.greenlight_sha }}":
+                ref = options.get("ref")
+                if not isinstance(ref, str) or not APPROVED_REF.fullmatch(ref):
                     errors.append(f"GL_DISPATCH_CHECKOUT: {filename}/{job_id}: Checkout must use ref: ${{{{ inputs.greenlight_sha }}}}, not the default branch or another ref.")
                 if str(options.get("persist-credentials")).lower() != "false":
                     errors.append(f"GL_DISPATCH_CREDENTIALS: {filename}/{job_id}: Set persist-credentials: false on checkout.")

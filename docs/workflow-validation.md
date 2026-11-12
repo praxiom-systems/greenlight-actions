@@ -103,6 +103,11 @@ the workflow and contract can change their intended behavior. Keep the dispatch
 example's input validation and checkout verification. Use a workflow linter
 alongside this check for general Actions syntax.
 
+Dispatch expression checks allow equivalent inner whitespace. Checkout checks
+inspect `actions/checkout@...` steps, including pinned commit versions, and
+require at least one. They do not inspect alternative checkout actions or
+manual `git checkout` commands, which can also change files later in the job.
+
 ## App-side setup messages
 
 The App uses its existing permissions to distinguish:
