@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Optional repository-side workflow validation for intended job/environment references and dispatch contracts, with custom names and no additional hosted App permissions.
+- Setup diagnostics guide covering environment typos, missing rules/workflows, dispatch configuration, and API errors for the matching backend release.
 - Dual-mode approval documentation and matching environment/dispatch workflow examples.
 - Automatic selection guidance, explicit mode overrides, setup recovery, and configuration conflict handling for the matching backend release.
 - Confirmed live dispatch testing in a private repository owned by a GitHub Free personal account, with both buttons and comments and passing/failing results.

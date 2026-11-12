@@ -39,6 +39,11 @@ jobs:
       - name: Validate workflow example contracts
         run: python3 scripts/validate-examples.py
 
+      - name: Test workflow validator and validate intended gates
+        run: |
+          python3 -m unittest discover -s scripts/tests -v
+          python3 scripts/validate-workflows.py
+
       - name: Check links
         uses: lycheeverse/lychee-action@v2
         with:

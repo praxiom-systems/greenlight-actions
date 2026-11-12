@@ -1,0 +1,10 @@
+{
+  "workflows": {
+    ".github/workflows/ci.yml": {
+      "mode": "environment",
+      "jobs": {
+        "lint": "greenlight"
+      }
+    }
+  }
+}

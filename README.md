@@ -106,6 +106,10 @@ Buttons and comment commands require write, maintain, or admin repository permis
 
 ## FAQ
 
+For environment-name typos and other workflow mistakes, use the optional
+[repository-side workflow validator](docs/workflow-validation.md) in an existing
+quick CI job. It supports custom names and does not grant the App source access.
+
 **Does Greenlight require Enterprise?**
 Only the environment gate requires Enterprise for private/internal repos. Dispatch works in Free private repos. Public repositories support both modes on all plans.
 
