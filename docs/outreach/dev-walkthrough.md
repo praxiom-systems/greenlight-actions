@@ -1,3 +1,5 @@
+![Greenlight Actions banner showing CI approval and the Run CI button](https://raw.githubusercontent.com/praxiom-systems/greenlight-actions/main/assets/banners/greenlight-banner-features.png)
+
 I'm a backend/DevOps engineer. And I've run into this a lot of times: I want a more refined setting for CI than just running everything on every push.
 
 I've worked with jobs that were expensive enough that doing that added up quickly. But I've had the same annoyance in personal projects too. Sometimes I'm pushing intermediate changes, and I don't need another full build or integration test run yet.
@@ -9,6 +11,8 @@ So I built **Greenlight Actions**. It lets you give your CI runs a greenlight wh
 I still want quick feedback. Linting and quick tests can keep running on every push. It's the longer builds, integration tests, or jobs that call paid services that I want to hold off on.
 
 With Greenlight, you choose which work waits for approval. Click **Run CI** on the PR check or comment `/greenlight` when you're ready. Each new commit needs fresh approval. Waiting doesn't use runner minutes.
+
+![Environment mode: the Greenlight check waits for approval with a Run CI button](https://raw.githubusercontent.com/praxiom-systems/greenlight-actions/main/assets/screenshots/product/checks-waiting-light.png)
 
 ## An example with environment mode
 
@@ -47,6 +51,8 @@ jobs:
       - run: npm ci
       - run: npm run test:integration
 ```
+
+![Environment mode: approval is accepted and the gated CI jobs are running](https://raw.githubusercontent.com/praxiom-systems/greenlight-actions/main/assets/screenshots/product/checks-running-light.png)
 
 Lint runs automatically. The integration job waits for approval before it gets a runner. Once you approve it, GitHub runs the job and reports its result normally.
 

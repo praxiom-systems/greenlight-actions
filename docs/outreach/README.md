@@ -24,6 +24,10 @@ Suggested tags: `showdev`, `github`, `devops`, `tutorial`.
 
 [dev-walkthrough.md](dev-walkthrough.md) contains the article body only. Enter the title separately. Review the Node example against your own setup and use DEV's AI-assistance disclosure controls as appropriate; the draft also includes a disclosure sentence.
 
+The draft includes the banner and two environment-mode screenshots from the
+published article, linked to this repository's assets using absolute raw URLs
+so the images render when the Markdown is pasted into DEV.
+
 ```sh
 xclip -selection clipboard < docs/outreach/dev-walkthrough.md
 ```
